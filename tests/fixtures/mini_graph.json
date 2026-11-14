@@ -1,0 +1,23 @@
+{"directed": false, "multigraph": false, "graph": {},
+ "nodes": [
+  {"id": "a1", "label": "a1()", "source_file": "pkg/a.py", "source_location": "L1"},
+  {"id": "a2", "label": "a2()", "source_file": "pkg/a.py", "source_location": "L5"},
+  {"id": "b1", "label": "b1()", "source_file": "pkg/sub/b.py", "source_location": "L1"},
+  {"id": "c1", "label": "c1()", "source_file": "lib/c.py", "source_location": "L1"},
+  {"id": "t1", "label": "test_a()", "source_file": "tests/test_a.py", "source_location": "L1"},
+  {"id": "d1", "label": "README", "source_file": "README.md", "source_location": "L1"},
+  {"id": "x1", "label": "Path", "source_file": ""},
+  {"id": "lone", "label": "lone.py", "source_file": "pkg/lone.py", "source_location": "L1"}
+ ],
+ "links": [
+  {"source": "a1", "target": "b1", "relation": "calls", "source_file": "pkg/a.py", "source_location": "L2"},
+  {"source": "a2", "target": "b1", "relation": "calls", "source_file": "pkg/a.py", "source_location": "L6"},
+  {"source": "a1", "target": "c1", "relation": "imports_from", "source_file": "pkg/a.py", "source_location": "L1"},
+  {"source": "a1", "target": "a2", "relation": "calls", "source_file": "pkg/a.py", "source_location": "L3"},
+  {"source": "b1", "target": "c1", "_src": "c1", "_tgt": "b1", "relation": "calls", "source_file": "lib/c.py", "source_location": "L2"},
+  {"source": "t1", "target": "a1", "relation": "calls", "source_file": "tests/test_a.py", "source_location": "L2"},
+  {"source": "d1", "target": "a1", "relation": "references", "source_file": "README.md", "source_location": "L3"},
+  {"source": "a1", "target": "x1", "relation": "calls", "source_file": "pkg/a.py", "source_location": "L4"},
+  {"source": "a1", "target": "ghost", "relation": "calls", "source_file": "pkg/a.py", "source_location": "L7"},
+  {"source": "a1", "target": "b1", "relation": "contains", "source_file": "pkg/a.py", "source_location": "L1"}
+ ]}
