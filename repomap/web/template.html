@@ -14,7 +14,19 @@
 html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 13px system-ui, sans-serif; }
 #bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--border); }
 #stats { color: var(--muted); margin-left: auto; }
-#map { display: block; width: 100%; height: calc(100% - 42px); cursor: grab; }
+#main { display: flex; height: calc(100% - 42px); }
+#map { display: block; flex: 1; min-width: 0; height: 100%; cursor: grab; }
+#side { width: 280px; flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--panel); }
+#side[hidden] { display: none; }
+#side-tools { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--border); }
+#tree-search { flex: 1; min-width: 0; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; }
+#tree { flex: 1; overflow-y: auto; padding: 4px 0; font: 12px ui-monospace, monospace; }
+.row { display: flex; align-items: center; gap: 4px; padding: 1px 8px; white-space: nowrap; }
+.row .tw { width: 14px; flex: none; border: 0; background: none; color: var(--muted); padding: 0; cursor: pointer; font: inherit; }
+.row .name { cursor: pointer; overflow: hidden; text-overflow: ellipsis; }
+.row .name:hover { color: var(--line); }
+.row.off .name { color: var(--muted); cursor: default; }
+.box.focus rect { stroke: var(--line); stroke-width: 3; }
 .box text { font: 12px ui-monospace, monospace; fill: var(--fg); pointer-events: none; }
 .box rect.leaf { fill: var(--leaf); stroke: var(--border); }
 .box.collapsed rect.leaf { stroke-width: 1.5; }
@@ -36,16 +48,23 @@ rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--
 </head>
 <body>
 <div id="bar">
+  <button id="side-toggle" type="button" aria-controls="side" aria-expanded="true">Tree</button>
   <label><input type="checkbox" id="opt-tests"> Test arrows</label>
   <label><input type="checkbox" id="opt-docs"> Docs/config</label>
   <label><input type="checkbox" id="opt-ext"> External</label>
   <button id="collapse-all" type="button">Collapse all</button>
   <span id="stats"></span>
 </div>
+<div id="main">
+<nav id="side" aria-label="File tree">
+  <div id="side-tools"><input id="tree-search" type="search" placeholder="Search files…" aria-label="Search files"><button id="show-all" type="button">Show all</button></div>
+  <div id="tree"></div>
+</nav>
 <svg id="map">
   <defs><marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0,0L10,5L0,10z"/></marker></defs>
   <g id="viewport"></g>
 </svg>
+</div>
 <div id="panel" hidden></div>
 <script id="model" type="application/json">__MODEL__</script>
 <script>/*__ELK__*/</script>

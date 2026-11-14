@@ -6,7 +6,9 @@
   const model = JSON.parse(document.getElementById("model").textContent);
   const tree = RepoMap.buildTree(model);
   const elk = new ELK();
-  const state = { expanded: new Set(), showTests: false, showDocs: false, showExternal: false };
+  const state = { expanded: new Set(), showTests: false, showDocs: false, showExternal: false, hidden: new Set() };
+  const treeOpen = new Set(); // tree panel open/closed, independent of state.expanded
+  let focusId = null;
   const $ = (id) => document.getElementById(id);
   const svg = $("map"), viewport = $("viewport"), panel = $("panel");
   let seq = 0, pinned = null, dragged = false;
@@ -55,7 +57,7 @@
     const boxLayer = el("g", {}, viewport), edgeLayer = el("g", {}, viewport);
     const drawNode = (n, ox, oy) => {
       const x = ox + n.x, y = oy + n.y, b = n.box;
-      const grp = el("g", { class: `box ${b.type}${b.collapsed ? " collapsed" : ""}${b.type === "file" ? " k-" + (tree.byId.get(b.id).kind || "") : ""}`, "data-id": b.id }, boxLayer);
+      const grp = el("g", { class: `box ${b.type}${b.id === focusId ? " focus" : ""}${b.collapsed ? " collapsed" : ""}${b.type === "file" ? " k-" + (tree.byId.get(b.id).kind || "") : ""}`, "data-id": b.id }, boxLayer);
       const open = !!n.children;
       el("rect", { x, y, width: n.width, height: n.height, rx: 4, class: open ? `frame d${depth(b.id) % 4}` : "leaf" }, grp);
       const t = el("text", { x: x + 8, y: y + 19 }, grp);
@@ -105,7 +107,8 @@
     $("stats").textContent = `${view.boxes.length} boxes, ${view.arrows.length} arrows`;
     try {
       const g = await elk.layout(toElk(view));
-      if (my === seq) draw(g);
+      if (my === seq) { draw(g); focusId = null; } // focus lasts until the next draw
+      return my === seq;
     } catch (err) {
       $("stats").textContent = "Layout error: " + err;
       console.error(err);
@@ -127,14 +130,66 @@
     render();
   }
 
+  function drawTree() {
+    const box = $("tree");
+    box.textContent = "";
+    for (const r of RepoMap.treeRows(tree, state, treeOpen, $("tree-search").value.trim())) {
+      const row = document.createElement("div");
+      row.className = "row" + (r.check === "off" ? " off" : "");
+      row.style.paddingLeft = 8 + r.depth * 14 + "px";
+      const tw = document.createElement(r.hasChildren ? "button" : "span");
+      tw.className = "tw";
+      if (r.hasChildren) {
+        tw.type = "button"; tw.textContent = r.open ? "▾" : "▸";
+        tw.setAttribute("aria-label", (r.open ? "Collapse " : "Expand ") + r.name);
+        tw.addEventListener("click", () => { treeOpen.has(r.id) ? treeOpen.delete(r.id) : treeOpen.add(r.id); drawTree(); });
+      }
+      const cb = document.createElement("input");
+      cb.type = "checkbox"; cb.checked = r.check === "on"; cb.indeterminate = r.check === "partial";
+      cb.setAttribute("aria-label", "Show " + r.id);
+      cb.addEventListener("change", () => setShown(r.id, cb.checked));
+      const name = document.createElement("span");
+      name.className = "name"; name.textContent = r.name + (r.type === "dir" ? "/" : ""); name.title = r.id;
+      if (r.check !== "off") name.addEventListener("click", () => focusOn(r.id));
+      row.append(tw, cb, name);
+      box.appendChild(row);
+    }
+  }
+
+  function setShown(id, on) {
+    if (on) {
+      const before = new Set(state.hidden);
+      for (const h of before) if (h === id || (/[/:]$/.test(id) && h.startsWith(id))) state.hidden.delete(h); // container descendants share its id prefix
+      if (tooBig()) state.hidden = before;
+    } else state.hidden.add(id);
+    render(); drawTree();
+  }
+
+  async function focusOn(id) {
+    const added = RepoMap.revealPath(tree, id).filter((p) => !state.expanded.has(p));
+    added.forEach((p) => state.expanded.add(p));
+    if (tooBig()) { added.forEach((p) => state.expanded.delete(p)); return; }
+    focusId = id;
+    if (!(await render())) return;
+    const node = viewport.querySelector(`[data-id="${CSS.escape(id)}"] rect`);
+    if (!node) return;
+    const b = node.getBBox(), r = svg.getBoundingClientRect();
+    tx = r.width / 2 - (b.x + b.width / 2) * k; ty = r.height / 2 - (b.y + b.height / 2) * k; apply();
+  }
+
   for (const [id, key] of [["opt-tests", "showTests"], ["opt-docs", "showDocs"], ["opt-ext", "showExternal"]]) {
     $(id).addEventListener("change", (ev) => {
       state[key] = ev.target.checked;
       if (ev.target.checked && tooBig()) { state[key] = ev.target.checked = false; return; }
-      render();
+      render(); drawTree();
     });
   }
-  $("collapse-all").addEventListener("click", () => { state.expanded.clear(); render(); });
+  $("collapse-all").addEventListener("click", () => { state.expanded.clear(); render(); drawTree(); });
+  $("show-all").addEventListener("click", () => { state.hidden.clear(); render(); drawTree(); });
+  $("tree-search").addEventListener("input", drawTree);
+  const setSide = (open) => { $("side").hidden = !open; $("side-toggle").setAttribute("aria-expanded", String(open)); };
+  $("side-toggle").addEventListener("click", () => setSide($("side").hidden));
+  setSide(window.innerWidth >= 640);
   svg.addEventListener("click", () => { if (dragged) return; pinned = null; panel.hidden = true; });
 
   // Pan/zoom without libraries.
@@ -155,4 +210,5 @@
   window.addEventListener("pointerup", () => { drag = null; });
   apply();
   render();
+  drawTree();
 })();

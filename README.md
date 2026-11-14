@@ -20,6 +20,15 @@ By default it writes `repomap.html` next to `graph.json`. Python 3.10+ standard 
 - **Collapse all**: back to the initial state.
 - If expanding would show more than 400 boxes + arrows, you are asked to confirm first.
 
+## Tree panel
+
+- The left panel shows the repo's folder tree; **Tree** in the top bar opens/closes it (closed by default on narrow screens).
+- Expanding/collapsing in the tree is only for browsing and does not change the map.
+- Uncheck a file or folder to remove it, and every arrow into or out of it, from the map. A folder's checkbox shows a partial state when only some of its contents are hidden. **Show all** brings everything back; hidden state is not kept on reload.
+- **Search files…** filters the tree by name (case-insensitive substring) and shows the path to each match.
+- Click a name to open its parent folders on the map, center it and highlight it.
+- The tree only lists items the filter buttons allow (docs with **Docs/config**, the external frame with **External**). Counts and the 400-item check exclude hidden items.
+
 ## Test
 
 ```
