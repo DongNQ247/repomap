@@ -13,15 +13,22 @@ export function buildTree(model) {
     }
     add({ id: f.path, name: parts[parts.length - 1], type: "file", kind: f.kind, children: [] }, cur);
   }
+  const syms = (model.symbols || []).map((x) => ({ id: x.id, name: x.name, type: x.kind, loc: x.loc,
+    kind: byId.get(x.file)?.kind, children: [], p: x.parent }));
+  for (const n of syms) byId.set(n.id, n);
+  for (const n of syms) { const p = byId.get(n.p); delete n.p; if (p) add(n, p); else byId.delete(n.id); }
   const ext = add({ id: "ext:", name: "External", type: "extroot", children: [] }, root);
   for (const x of model.external) add({ id: x.id, name: x.label, type: "ext", children: [] }, ext);
   root.byId = byId;
   return root;
 }
 
-// Filter-button rule for a leaf (file or external symbol); ignores `hidden`.
-const allowedLeaf = (n, state) => n.type === "file" ? (state.showDocs || n.kind !== "doc") : state.showExternal;
-const isLeaf = (n) => n.type === "file" || n.type === "ext";
+const isCode = (n) => n.type === "file" || n.type === "class" || n.type === "func";
+// Nearest file node at or above a file/class/func node.
+const fileOf = (n) => { while (n.type !== "file") n = n.parent; return n; };
+// Filter-button rule for a file, symbol (by its file) or external; ignores `hidden`.
+const allowedLeaf = (n, state) => isCode(n) ? (state.showDocs || fileOf(n).kind !== "doc") : state.showExternal;
+const isLeaf = (n) => n.type === "ext" || (isCode(n) && n.children.length === 0);
 
 // True if the node or any ancestor is in `hidden`.
 export function isHidden(n, hidden) {
@@ -37,12 +44,13 @@ export function allowed(n, state) {
 
 export function visibleView(tree, model, state) {
   const byId = tree.byId;
-  const shown = (n) => isLeaf(n) ? allowedLeaf(n, state) && !isHidden(n, state.hidden) : leafCount(n) > 0;
+  // Files/symbols by their own rule (a file stays even if all its symbols are hidden); folders by content.
+  const shown = (n) => isCode(n) || n.type === "ext" ? allowedLeaf(n, state) && !isHidden(n, state.hidden) : leafCount(n) > 0;
   const counts = new Map();
   function leafCount(n) {
     if (counts.has(n.id)) return counts.get(n.id);
     let c = 0;
-    for (const ch of n.children) c += isLeaf(ch) ? (shown(ch) ? 1 : 0) : leafCount(ch);
+    for (const ch of n.children) c += ch.type === "file" || ch.type === "ext" ? (shown(ch) ? 1 : 0) : leafCount(ch);
     counts.set(n.id, c);
     return c;
   }
@@ -52,9 +60,10 @@ export function visibleView(tree, model, state) {
   (function walk(n) {
     for (const ch of n.children) {
       if (!shown(ch)) continue;
-      const container = ch.type === "dir" || ch.type === "extroot";
-      boxes.push({ id: ch.id, name: ch.name, type: ch.type, parent: n.id,
-        collapsed: container && !isOpen(ch), fileCount: container ? leafCount(ch) : 0 });
+      const dir = ch.type === "dir" || ch.type === "extroot", container = !isLeaf(ch);
+      boxes.push({ id: ch.id, name: ch.name, type: ch.type, parent: n.id, loc: ch.loc,
+        collapsed: container && !isOpen(ch), fileCount: dir ? leafCount(ch) : 0,
+        childCount: container && !dir ? ch.children.filter(shown).length : 0 });
       visible.add(ch.id);
       if (container && isOpen(ch)) walk(ch);
     }
@@ -141,7 +150,7 @@ export function treeRows(tree, state, treeOpen, query) {
       if (!allowed(ch, state) || (q && !matches(ch))) continue;
       const hasChildren = !isLeaf(ch);
       const open = hasChildren && (q ? true : treeOpen.has(ch.id));
-      rows.push({ id: ch.id, name: ch.name, type: ch.type, depth, hasChildren, open, check: check(ch) });
+      rows.push({ id: ch.id, name: ch.name, type: ch.type, loc: ch.loc, depth, hasChildren, open, check: check(ch) });
       if (open) walk(ch, depth + 1, nameHit(ch) ? "" : q);
     }
   })(tree, 0, q0);

@@ -129,3 +129,46 @@ test("treeRows: folder with every allowed leaf hidden is off", () => {
   const r = treeRows(tree, S({ hidden: ["pkg/a.py", "pkg/lone.py", "pkg/sub/b.py"] }), new Set(), "");
   assert.equal(r.find(x => x.id === "pkg/").check, "off");
 });
+
+// Symbol level (spec v3): same content as tests/fixtures/sym_graph.json after build_model.
+const SM = { files: [{path:"pkg/__init__.py",kind:"code"},{path:"pkg/a.py",kind:"code"},{path:"pkg/b.py",kind:"code"},{path:"tests/test_a.py",kind:"test"}],
+  external: [],
+  symbols: [{id:"sym:run",name:"run()",file:"pkg/a.py",parent:"pkg/a.py",kind:"func",loc:"L3"},
+            {id:"sym:K",name:"K",file:"pkg/a.py",parent:"pkg/a.py",kind:"class",loc:"L6"},
+            {id:"sym:km",name:".go()",file:"pkg/a.py",parent:"sym:K",kind:"func",loc:"L7"},
+            {id:"sym:g",name:"g()",file:"pkg/b.py",parent:"pkg/b.py",kind:"func",loc:"L2"},
+            {id:"sym:t1",name:"test_run()",file:"tests/test_a.py",parent:"tests/test_a.py",kind:"func",loc:"L2"}],
+  edges: [E("sym:run","sym:g",1,"calls"),E("sym:km","sym:g",1,"calls"),E("sym:run","sym:km",1,"calls"),
+          E("pkg/a.py","pkg/b.py",1,"imports_from"),E("pkg/a.py","sym:g",1,"calls"),E("sym:t1","sym:run",1,"calls")] };
+const ST = buildTree(SM);
+
+test("files collapsed: same as file level", () => {
+  assert.deepEqual(arrowSet(visibleView(ST, SM, S({expanded:["pkg/"]}))), ["pkg/a.py->pkg/b.py:4"]);
+});
+test("open a.py: functions and collapsed class", () => {
+  const v = visibleView(ST, SM, S({expanded:["pkg/","pkg/a.py"]}));
+  assert.ok(v.boxes.some(b => b.id === "sym:K" && b.collapsed && b.childCount === 1));
+  assert.deepEqual(arrowSet(v), ["pkg/a.py->pkg/b.py:2", "sym:K->pkg/b.py:1", "sym:run->pkg/b.py:1", "sym:run->sym:K:1"]);  // Focus 4
+});
+test("module-level source stays on file frame", () => {  // Focus 2
+  const v = visibleView(ST, SM, S({expanded:["pkg/","pkg/a.py","pkg/b.py"]}));
+  assert.ok(arrowSet(v).includes("pkg/a.py->sym:g:1"));
+  assert.ok(arrowSet(v).includes("pkg/a.py->pkg/b.py:1"));
+});
+test("hide all functions of a file: file stays", () => {  // Focus 1
+  const v = visibleView(ST, SM, S({expanded:["pkg/","pkg/a.py"], hidden:["sym:run","sym:K"]}));
+  assert.ok(v.boxes.some(b => b.id === "pkg/a.py"));
+  assert.deepEqual(arrowSet(v), ["pkg/a.py->pkg/b.py:2"]);
+});
+test("test symbol arrows follow showTests", () => {  // Focus 3
+  const st = (t) => arrowSet(visibleView(ST, SM, S({showTests:t, expanded:["pkg/","pkg/a.py","tests/","tests/test_a.py"]})));
+  assert.ok(!st(false).some(s => s.startsWith("sym:t1")));
+  assert.ok(st(true).includes("sym:t1->sym:run:1"));
+});
+test("treeRows: file has children, search finds symbols", () => {
+  const rows = treeRows(ST, S(), new Set(["pkg/"]), "");
+  assert.equal(rows.find(r => r.id === "pkg/a.py").hasChildren, true);
+  assert.equal(rows.find(r => r.id === "pkg/__init__.py").hasChildren, false);
+  assert.deepEqual(treeRows(ST, S(), new Set(), "go").map(r => r.id), ["pkg/", "pkg/a.py", "sym:K", "sym:km"]);
+  assert.equal(revealPath(ST, "sym:km").join(","), "pkg/,pkg/a.py,sym:K");
+});
