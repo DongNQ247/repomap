@@ -5,6 +5,7 @@ description = "Render graphify's graph.json as an interactive nested file/folder
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
+license-files = ["LICENSE"]
 dependencies = []
 
 [project.urls]

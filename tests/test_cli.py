@@ -55,6 +55,29 @@ class CliTest(unittest.TestCase):
         self.assertIn("graphify update .", r.stderr)
         self.assertNotIn("Traceback", r.stderr)
 
+    def test_dir_without_graph_names_tried_path(self):
+        (self.tmp / "empty").mkdir()
+        r = run(["empty"], cwd=self.tmp)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("empty/graph.json not found", r.stderr)
+        self.assertIn("uv tool install graphifyy", r.stderr)
+
+    def test_style_respects_tty_and_no_color(self):
+        from unittest import mock
+        from repomap.__main__ import style
+
+        class Tty:
+            def __init__(self, tty): self.tty = tty
+            def isatty(self): return self.tty
+
+        env = {k: v for k, v in os.environ.items() if k != "NO_COLOR"}
+        with mock.patch.dict(os.environ, env, clear=True):
+            self.assertTrue(style(Tty(True)))
+            self.assertFalse(style(Tty(False)))
+        for val, want in (("", True), ("1", False)):
+            with mock.patch.dict(os.environ, {"NO_COLOR": val}):
+                self.assertEqual(style(Tty(True)), want)
+
     def test_path_dir_and_file(self):
         proj = self.project()
         elsewhere = self.tmp / "elsewhere"

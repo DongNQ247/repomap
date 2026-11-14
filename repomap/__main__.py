@@ -33,7 +33,7 @@ def find_graph(arg, cwd):
 
 
 def style(stream):
-    return stream.isatty() and "NO_COLOR" not in os.environ
+    return stream.isatty() and not os.environ.get("NO_COLOR")
 
 
 def rel(p, cwd):
@@ -65,7 +65,7 @@ def main(argv=None):
     cwd = Path.cwd()
     graph = find_graph(args.graph, cwd)
     if not graph.is_file():
-        fail(f"{rel(graph, cwd)} not found in {cwd.resolve()}" if args.graph is None else f"{args.graph} not found")
+        fail(f"{rel(graph, cwd)} not found in {cwd.resolve()}" if args.graph is None else f"{rel(graph, cwd)} not found")
         print(GUIDE, file=sys.stderr)
         return 1
     shown = rel(graph, cwd)

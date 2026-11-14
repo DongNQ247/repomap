@@ -67,3 +67,5 @@ node --test tests/*.test.mjs
 ## License
 
 MIT
+
+Third-party: the bundled ELK layout engine (elkjs 0.9.3) is EPL-2.0; see `repomap/web/vendor/LICENSE-elk.txt`.

@@ -1,0 +1,5 @@
+elk.bundled.js is elkjs 0.9.3, the JavaScript build of the Eclipse Layout Kernel.
+Copyright (c) Kiel University and others.
+Licensed under the Eclipse Public License 2.0 (EPL-2.0):
+https://www.eclipse.org/legal/epl-2.0/
+Source: https://github.com/kieler/elkjs
