@@ -28,6 +28,21 @@ Nhãn `Docs/config` đã là tiếng Anh, giữ nguyên.
 
 Người dùng quyết định chưa cần tô màu phần agent thay đổi. Mọi nhắc tới **giai đoạn 2 / diff / PR** trong `spec_v1.md` (mục 2 "Không phải mục tiêu", mục 6 "Chuẩn bị cho giai đoạn 2") **không còn hiệu lực**: không lên kế hoạch, không thiết kế để chuẩn bị cho nó. Code hiện có (`data-id` ổn định trên mỗi ô) giữ nguyên, không cần gỡ.
 
-## 3. Kiểm tra
+## 3. Ẩn/hiện file và folder qua panel cây bên trái
+
+**Người dùng yêu cầu**
+- Thêm tính năng **ẩn/hiện từng file (và folder)** trên bản đồ.
+- Một **panel bên trái, thu gọn được** (nút đóng/mở panel), hiển thị **cấu trúc cây** thư mục của repo; các node trong cây **mở rộng/thu gọn được**.
+
+**Đề xuất của Claude — người dùng đã đồng ý toàn bộ** (ẩn file → mũi tên biến mất hẳn, không gộp lên cha)
+- Mỗi dòng trong cây có một **checkbox hiện/ẩn**. Bỏ chọn → file/folder đó biến khỏi bản đồ **cùng mọi mũi tên đi vào/ra nó** (không gộp lên folder cha — mục đích là bớt nhiễu). Ẩn folder = ẩn mọi thứ bên trong; checkbox folder ở trạng thái "một phần" khi chỉ ẩn một số con.
+- Mở/thu trong **cây** chỉ để duyệt, **độc lập** với mở/thu trên **bản đồ**. Click tên một mục trong cây → bản đồ mở các folder cha cần thiết và cuộn tới, làm nổi bật mục đó.
+- Cây có ô **tìm theo tên** để lọc nhanh.
+- Cây chỉ hiện những mục mà các nút lọc hiện tại cho phép (docs ẩn khi "Docs/config" tắt; khung External chỉ khi bật).
+- Trạng thái ẩn không lưu lại khi tải lại trang; nút "Show all" để hiện lại tất cả.
+- Đếm `boxes/arrows` và cảnh báo 400 mục tính sau khi đã bỏ các mục ẩn.
+- Chữ trên panel bằng tiếng Anh (mục 1).
+
+## 4. Kiểm tra
 
 Kiểm tra mục 1 khi sửa: `grep -rnP "[^\x00-\x7F]" repomap/ README.md` (trừ `vendor/`) chỉ còn các ký hiệu `▸ ▾ → …`.
