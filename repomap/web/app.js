@@ -66,10 +66,9 @@
       for (const c of n.children || []) drawNode(c, x, y);
     };
     for (const c of g.children || []) drawNode(c, 0, 0);
-    for (const e of g.edges || []) {
-      const a = e.arrow;
-      for (const s of e.sections || []) {
-        const pts = [s.startPoint, ...(s.bendPoints || []), s.endPoint];
+    for (const { edge, sections } of RepoMap.absoluteLayout(g).edges) {
+      const a = edge.arrow;
+      for (const pts of sections) {
         const d = "M" + pts.map((p) => `${p.x},${p.y}`).join("L");
         const grp = el("g", { class: "arrow", "data-src": a.src, "data-tgt": a.tgt }, edgeLayer);
         el("path", { d, class: "hit" }, grp);

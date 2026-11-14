@@ -71,4 +71,24 @@ export function visibleView(tree, model, state) {
   return { boxes, arrows, total: boxes.length + arrows.length };
 }
 
-globalThis.RepoMap = { buildTree, visibleView };
+// ELK gives node x/y relative to the parent and edge points relative to e.container
+// (root when absent); return absolute boxes by id and absolute point lists per edge.
+export function absoluteLayout(g) {
+  const pos = new Map([[g.id, { x: 0, y: 0, width: g.width, height: g.height }]]);
+  const walk = (n, ox, oy) => {
+    for (const c of n.children || []) {
+      const x = ox + c.x, y = oy + c.y;
+      pos.set(c.id, { x, y, width: c.width, height: c.height });
+      walk(c, x, y);
+    }
+  };
+  walk(g, 0, 0);
+  const edges = (g.edges || []).map((e) => {
+    const o = pos.get(e.container) || pos.get(g.id);
+    return { edge: e, sections: (e.sections || []).map((s) =>
+      [s.startPoint, ...(s.bendPoints || []), s.endPoint].map((p) => ({ x: p.x + o.x, y: p.y + o.y }))) };
+  });
+  return { pos, edges };
+}
+
+globalThis.RepoMap = { buildTree, visibleView, absoluteLayout };

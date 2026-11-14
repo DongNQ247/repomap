@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildTree, visibleView } from "../repomap/web/aggregate.js";
+import { buildTree, visibleView, absoluteLayout } from "../repomap/web/aggregate.js";
 
 // Same content as tests/fixtures/mini_graph.json after build_model.
 const E = (src, tgt, count, rel) => ({ src, tgt, count, by_rel: { [rel]: count }, samples: [] });
@@ -55,4 +55,16 @@ test("toggles", () => {
   assert.ok(ve.boxes.some((b) => b.id === "ext:"));
   assert.ok(ve.boxes.some((b) => b.id === "ext:Path" && b.name === "Path"));
   assert.ok(arrowSet(ve).includes("pkg/->ext:Path:1"));
+});
+
+test("absoluteLayout offsets edge points by their container", () => {
+  const g = { id: "__root__", children: [{ id: "p/", x: 100, y: 50, width: 200, height: 100, children: [
+    { id: "p/a", x: 10, y: 30, width: 40, height: 30 }, { id: "p/b", x: 100, y: 30, width: 40, height: 30 }] }],
+    edges: [
+      { id: "e0", container: "p/", sections: [{ startPoint: { x: 50, y: 45 }, endPoint: { x: 100, y: 45 } }] },
+      { id: "e1", sections: [{ startPoint: { x: 1, y: 2 }, bendPoints: [{ x: 3, y: 4 }], endPoint: { x: 5, y: 6 } }] }] };
+  const { pos, edges } = absoluteLayout(g);
+  assert.deepEqual(pos.get("p/b"), { x: 200, y: 80, width: 40, height: 30 });
+  assert.deepEqual(edges[0].sections, [[{ x: 150, y: 95 }, { x: 200, y: 95 }]]);
+  assert.deepEqual(edges[1].sections, [[{ x: 1, y: 2 }, { x: 3, y: 4 }, { x: 5, y: 6 }]]);
 });
