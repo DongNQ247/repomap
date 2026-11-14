@@ -13,7 +13,7 @@ export function buildTree(model) {
     }
     add({ id: f.path, name: parts[parts.length - 1], type: "file", kind: f.kind, children: [] }, cur);
   }
-  const ext = add({ id: "ext:", name: "Bên ngoài", type: "extroot", children: [] }, root);
+  const ext = add({ id: "ext:", name: "External", type: "extroot", children: [] }, root);
   for (const x of model.external) add({ id: x.id, name: x.label, type: "ext", children: [] }, ext);
   root.byId = byId;
   return root;

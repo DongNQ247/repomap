@@ -41,6 +41,13 @@ class TestRender(unittest.TestCase):
             self.assertEqual(r.returncode, 1)
             self.assertTrue(r.stderr)
 
+    def test_ui_text_is_english(self):
+        allowed = set("▸▾→…")
+        for rel in ["repomap/web/aggregate.js", "repomap/web/app.js", "repomap/web/template.html", "README.md"]:
+            text = (ROOT / rel).read_text(encoding="utf-8")
+            bad = sorted({ch for ch in text if ord(ch) > 127 and ch not in allowed})
+            self.assertEqual(bad, [], rel)
+
 
 if __name__ == "__main__":
     unittest.main()

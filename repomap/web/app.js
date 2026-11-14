@@ -17,7 +17,7 @@
     if (parent) parent.appendChild(e);
     return e;
   };
-  const label = (b) => b.collapsed ? `▸ ${b.name}/ (${b.fileCount} ${b.type === "extroot" ? "ký hiệu" : "file"})`
+  const label = (b) => b.collapsed ? `▸ ${b.name}/ (${b.fileCount} ${b.type === "extroot" ? "symbols" : "files"})`
     : (b.type === "dir" ? `▾ ${b.name}/` : b.type === "extroot" ? `▾ ${b.name}` : b.name);
   const textW = (s) => Math.max(60, s.length * 7.2 + 20);
   const depth = (id) => id.startsWith("ext:") ? (id === "ext:" ? 0 : 1) : (id.replace(/\/$/, "").match(/\//g) || []).length;
@@ -87,14 +87,14 @@
     panel.textContent = "";
     const add = (tag, text, cls) => { const e = document.createElement(tag); e.textContent = text; if (cls) e.className = cls; panel.appendChild(e); return e; };
     add("div", `${a.src} → ${a.tgt}`, "head");
-    add("div", `${a.count} link: ` + Object.entries(a.by_rel).map(([r, c]) => `${r} ${c}`).join(", "));
+    add("div", `${a.count} links: ` + Object.entries(a.by_rel).map(([r, c]) => `${r} ${c}`).join(", "));
     const ul = add("ul", "");
     for (const s of a.samples) {
       const li = document.createElement("li");
       li.textContent = `${s.from} → ${s.to} (${s.rel}) ${s.loc}`;
       ul.appendChild(li);
     }
-    if (a.count > a.samples.length) add("div", `… ${a.samples.length}/${a.count} mẫu`, "more");
+    if (a.count > a.samples.length) add("div", `… ${a.samples.length}/${a.count} samples`, "more");
     panel.hidden = false;
   }
 
@@ -102,19 +102,19 @@
     const my = ++seq;
     const view = RepoMap.visibleView(tree, model, state);
     pinned = null; panel.hidden = true; // old arrow objects are gone after re-layout
-    $("stats").textContent = `${view.boxes.length} ô, ${view.arrows.length} mũi tên`;
+    $("stats").textContent = `${view.boxes.length} boxes, ${view.arrows.length} arrows`;
     try {
       const g = await elk.layout(toElk(view));
       if (my === seq) draw(g);
     } catch (err) {
-      $("stats").textContent = "Lỗi bố cục: " + err;
+      $("stats").textContent = "Layout error: " + err;
       console.error(err);
     }
   }
 
   const tooBig = () => {
     const n = RepoMap.visibleView(tree, model, state).total;
-    return n > MAX_VISIBLE && !confirm(`Sẽ hiện ${n} mục, có thể chậm. Tiếp tục?`);
+    return n > MAX_VISIBLE && !confirm(`This will show ${n} items and may be slow. Continue?`);
   };
 
   function toggle(id) {
