@@ -26,13 +26,18 @@ body { display: flex; flex-direction: column; background: var(--bg); color: var(
 .row .tw { width: 14px; flex: none; border: 0; background: none; color: var(--muted); padding: 0; cursor: pointer; font: inherit; }
 .row .name { cursor: pointer; overflow: hidden; text-overflow: ellipsis; }
 .row .name:hover { color: var(--line); }
+.row .name.t-class { font-weight: 600; }
+.row .name.t-func { font-style: italic; }
 .row.off .name { color: var(--muted); cursor: default; }
 .box.focus rect { stroke: var(--line); stroke-width: 3; }
 .box text { font: 12px ui-monospace, monospace; fill: var(--fg); pointer-events: none; }
 .box rect.leaf { fill: var(--leaf); stroke: var(--border); }
 .box.collapsed rect.leaf { stroke-width: 1.5; }
-.box.dir, .box.extroot { cursor: pointer; }
+.box.dir, .box.extroot, .box.collapsed, .box:has(> rect.frame) { cursor: pointer; }
 .box rect.frame { stroke: var(--muted); stroke-dasharray: 5 3; }
+.box.file > rect.frame { stroke-dasharray: none; stroke-width: 1; }
+.box.class > rect.frame { stroke-dasharray: 1 3; stroke-width: 1.5; }
+.box.class > rect.leaf { stroke-dasharray: 1 3; }
 rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--d2); } rect.d3 { fill: var(--d3); }
 .box.k-test text { fill: var(--muted); }
 .arrow .line { fill: none; stroke: var(--line); opacity: .7; }

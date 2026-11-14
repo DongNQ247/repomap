@@ -19,17 +19,31 @@
     if (parent) parent.appendChild(e);
     return e;
   };
-  const label = (b) => b.collapsed ? `▸ ${b.name}/ (${b.fileCount} ${b.type === "extroot" ? "symbols" : "files"})`
-    : (b.type === "dir" ? `▾ ${b.name}/` : b.type === "extroot" ? `▾ ${b.name}` : b.name);
+  const label = (b) => {
+    if (b.type === "file" || b.type === "class") {
+      if (b.collapsed && b.childCount) return `▸ ${b.name} (${b.childCount} ${b.type === "file" ? "symbols" : "methods"})`;
+      return container(b) ? `▾ ${b.name}` : b.name;
+    }
+    return b.collapsed ? `▸ ${b.name}/ (${b.fileCount} ${b.type === "extroot" ? "symbols" : "files"})`
+      : (b.type === "dir" ? `▾ ${b.name}/` : b.type === "extroot" ? `▾ ${b.name}` : b.name);
+  };
+  const container = (b) => b.type === "dir" || b.type === "extroot" || b.childCount > 0;
+  // "file:Lnn" for symbols, the id otherwise.
+  const where = (id) => {
+    let n = tree.byId.get(id), f = n;
+    if (!n || (n.type !== "func" && n.type !== "class")) return id;
+    while (f.type !== "file") f = f.parent;
+    return `${n.name} ${f.id}:${n.loc}`;
+  };
   const textW = (s) => Math.max(60, s.length * 7.2 + 20);
-  const depth = (id) => id.startsWith("ext:") ? (id === "ext:" ? 0 : 1) : (id.replace(/\/$/, "").match(/\//g) || []).length;
+  const depth = (id) => RepoMap.revealPath(tree, id).length;
 
   function toElk(view) {
     const kids = new Map();
     for (const b of view.boxes) (kids.get(b.parent) || kids.set(b.parent, []).get(b.parent)).push(b);
     const node = (b) => {
       const n = { id: b.id, box: b, labels: [{ text: label(b) }] };
-      const open = (b.type === "dir" || b.type === "extroot") && !b.collapsed;
+      const open = container(b) && !b.collapsed;
       if (open) {
         n.children = (kids.get(b.id) || []).map(node);
         n.layoutOptions = { "elk.padding": "[top=30,left=12,bottom=12,right=12]" };
@@ -59,12 +73,12 @@
       const x = ox + n.x, y = oy + n.y, b = n.box;
       const grp = el("g", { class: `box ${b.type}${b.id === focusId ? " focus" : ""}${b.collapsed ? " collapsed" : ""}${b.type === "file" ? " k-" + (tree.byId.get(b.id).kind || "") : ""}`, "data-id": b.id }, boxLayer);
       const open = !!n.children;
-      el("rect", { x, y, width: n.width, height: n.height, rx: 4, class: open ? `frame d${depth(b.id) % 4}` : "leaf" }, grp);
+      el("rect", { x, y, width: n.width, height: n.height, class: open ? `frame d${depth(b.id) % 4}` : "leaf", rx: b.type === "func" ? 10 : 4 }, grp);
       const t = el("text", { x: x + 8, y: y + 19 }, grp);
       t.textContent = label(b);
       const title = el("title", {}, grp);
-      title.textContent = b.id;
-      if (b.type === "dir" || b.type === "extroot") grp.addEventListener("click", (ev) => { ev.stopPropagation(); if (!dragged) toggle(b.id); });
+      title.textContent = where(b.id);
+      if (container(b)) grp.addEventListener("click", (ev) => { ev.stopPropagation(); if (!dragged) toggle(b.id); });
       for (const c of n.children || []) drawNode(c, x, y);
     };
     for (const c of g.children || []) drawNode(c, 0, 0);
@@ -88,7 +102,7 @@
   function show(a) {
     panel.textContent = "";
     const add = (tag, text, cls) => { const e = document.createElement(tag); e.textContent = text; if (cls) e.className = cls; panel.appendChild(e); return e; };
-    add("div", `${a.src} → ${a.tgt}`, "head");
+    add("div", `${where(a.src)} → ${where(a.tgt)}`, "head");
     add("div", `${a.count} links: ` + Object.entries(a.by_rel).map(([r, c]) => `${r} ${c}`).join(", "));
     const ul = add("ul", "");
     for (const s of a.samples) {
@@ -152,7 +166,8 @@
       cb.setAttribute("aria-label", "Show " + r.id);
       cb.addEventListener("change", () => setShown(r.id, cb.checked));
       const name = document.createElement("span");
-      name.className = "name"; name.textContent = r.name + (r.type === "dir" ? "/" : ""); name.title = r.id;
+      name.className = "name t-" + r.type; name.textContent = r.name + (r.type === "dir" ? "/" : "");
+      name.title = where(r.id);
       if (r.check !== "off") name.addEventListener("click", () => focusOn(r.id));
       row.append(tw, cb, name);
       box.appendChild(row);

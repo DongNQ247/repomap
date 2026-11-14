@@ -29,6 +29,12 @@ By default it writes `repomap.html` next to `graph.json`. Python 3.10+ standard 
 - Click a name to open its parent folders on the map, center it and highlight it.
 - The tree only lists items the filter buttons allow (docs with **Docs/config**, the external frame with **External**). Counts and the 400-item check exclude hidden items.
 
+## Expanding files
+
+- Click a file with functions/classes (`▸ a.py (N symbols)`) to open it as a frame showing them; click a class (`▸ K (N methods)`) to see its methods. Files and classes start collapsed. Files with no symbols (e.g. an empty `__init__.py`) do not open.
+- `calls` arrows attach to the function when it is visible and merge up to the nearest visible class/file when collapsed. Imports and module-level calls stay on the file frame. Arrow counts at file level are unchanged.
+- Symbols appear in the tree panel too (classes in bold, functions in italics); hide, search and click-to-jump work the same. Hover shows `file:line`.
+
 ## Test
 
 ```
