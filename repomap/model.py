@@ -25,7 +25,9 @@ def _line(loc):
 
 def build_model(nodes, links):
     # Symbol = code node contained (contains/method) by a node of the same file; value = parent id.
-    code = lambda nid: nodes[nid].get("file_type") == "code" and nodes[nid].get("source_file")
+    # Doc/config files (JSON/YAML keys) get no symbols even if the extractor marks them code.
+    code = lambda nid: nodes[nid].get("file_type") == "code" and nodes[nid].get("source_file") \
+        and classify(nodes[nid]["source_file"]) != "doc"
     parent_of, has_method = {}, set()
     for l in links:
         if l["relation"] in ("contains", "method") and code(l["tgt"]) \
@@ -33,6 +35,14 @@ def build_model(nodes, links):
             parent_of.setdefault(l["tgt"], l["src"])
         if l["relation"] == "method":
             has_method.add(l["src"])
+    # Break contains cycles: a parent whose chain leads back to the child -> attach to the file.
+    for nid in list(parent_of):
+        p, seen = parent_of[nid], set()
+        while p in parent_of and p != nid and p not in seen:
+            seen.add(p)
+            p = parent_of[p]
+        if p == nid:
+            parent_of[nid] = None
 
     def end(nid, rel=""):
         if rel == "calls" and nid in parent_of:

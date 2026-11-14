@@ -21,13 +21,16 @@
   };
   const label = (b) => {
     if (b.type === "file" || b.type === "class") {
-      if (b.collapsed && b.childCount) return `▸ ${b.name} (${b.childCount} ${b.type === "file" ? "symbols" : "methods"})`;
-      return container(b) ? `▾ ${b.name}` : b.name;
+      if (!b.hasChildren) return b.name;
+      const n = b.childCount ? `${b.childCount} ${b.type === "file" ? "symbols" : "methods"}` : "0 shown";
+      const hid = b.hiddenCount ? `, ${b.hiddenCount} hidden` : "";
+      if (b.collapsed) return `▸ ${b.name} (${n}${hid})`;
+      return b.childCount ? `▾ ${b.name}` : `▾ ${b.name} (${n}${hid})`;
     }
     return b.collapsed ? `▸ ${b.name}/ (${b.fileCount} ${b.type === "extroot" ? "symbols" : "files"})`
       : (b.type === "dir" ? `▾ ${b.name}/` : b.type === "extroot" ? `▾ ${b.name}` : b.name);
   };
-  const container = (b) => b.type === "dir" || b.type === "extroot" || b.childCount > 0;
+  const container = (b) => b.type === "dir" || b.type === "extroot" || b.hasChildren;
   // "file:Lnn" for symbols, the id otherwise.
   const where = (id) => {
     let n = tree.byId.get(id), f = n;
@@ -43,9 +46,9 @@
     for (const b of view.boxes) (kids.get(b.parent) || kids.set(b.parent, []).get(b.parent)).push(b);
     const node = (b) => {
       const n = { id: b.id, box: b, labels: [{ text: label(b) }] };
-      const open = container(b) && !b.collapsed;
-      if (open) {
-        n.children = (kids.get(b.id) || []).map(node);
+      const ch = kids.get(b.id) || [];
+      if (container(b) && !b.collapsed && ch.length) { // open with nothing visible: drawn as a leaf, still clickable
+        n.children = ch.map(node);
         n.layoutOptions = { "elk.padding": "[top=30,left=12,bottom=12,right=12]" };
       } else {
         n.width = textW(label(b));
@@ -86,7 +89,7 @@
       const a = edge.arrow;
       for (const pts of sections) {
         const d = "M" + pts.map((p) => `${p.x},${p.y}`).join("L");
-        const grp = el("g", { class: "arrow", "data-src": a.src, "data-tgt": a.tgt }, edgeLayer);
+        const grp = el("g", { class: a.inner ? "arrow self" : "arrow", "data-src": a.src, "data-tgt": a.tgt }, edgeLayer);
         el("path", { d, class: "hit" }, grp);
         el("path", { d, class: "line", "stroke-width": 1 + Math.log2(a.count), "marker-end": "url(#head)" }, grp);
         const m = pts[Math.floor((pts.length - 1) / 2)], m2 = pts[Math.floor((pts.length - 1) / 2) + 1] || m;
@@ -103,6 +106,7 @@
     panel.textContent = "";
     const add = (tag, text, cls) => { const e = document.createElement(tag); e.textContent = text; if (cls) e.className = cls; panel.appendChild(e); return e; };
     add("div", `${where(a.src)} → ${where(a.tgt)}`, "head");
+    if (a.inner) add("div", `(within ${where(RepoMap.revealPath(tree, a.tgt).includes(a.src) ? a.src : a.tgt)})`, "more");
     add("div", `${a.count} links: ` + Object.entries(a.by_rel).map(([r, c]) => `${r} ${c}`).join(", "));
     const ul = add("ul", "");
     for (const s of a.samples) {

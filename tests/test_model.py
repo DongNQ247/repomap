@@ -68,6 +68,25 @@ class TestSymbols(unittest.TestCase):
     def test_v1_fixture_unchanged(self):
         self.assertEqual(m()["symbols"], [])   # mini_graph không có contains cùng file
 
+    def test_doc_files_have_no_symbols(self):
+        nodes = {"f": {"source_file": "conf.json", "file_type": "code"},
+                 "k": {"source_file": "conf.json", "file_type": "code", "label": "key"},
+                 "F": {"source_file": "a.py", "file_type": "code"},
+                 "g": {"source_file": "a.py", "file_type": "code", "label": "g()"}}
+        links = [{"src": "f", "tgt": "k", "relation": "contains"},
+                 {"src": "F", "tgt": "g", "relation": "contains"}]
+        self.assertEqual([s["id"] for s in build_model(nodes, links)["symbols"]], ["sym:g"])
+
+    def test_contains_cycle_attaches_to_file(self):
+        n = lambda: {"source_file": "a.py", "file_type": "code"}
+        nodes = {"x": n(), "y": n(), "z": n()}
+        links = [{"src": "x", "tgt": "y", "relation": "contains"},
+                 {"src": "y", "tgt": "x", "relation": "contains"},
+                 {"src": "z", "tgt": "z", "relation": "contains"}]
+        par = {s["id"]: s["parent"] for s in build_model(nodes, links)["symbols"]}
+        self.assertEqual(par["sym:z"], "a.py")
+        self.assertIn("a.py", (par["sym:x"], par["sym:y"]))  # chain terminates at the file
+
 
 if __name__ == "__main__":
     unittest.main()

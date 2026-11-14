@@ -6,10 +6,10 @@
 <title>Repo Map</title>
 <style>
 :root { color-scheme: light dark; --bg: #fafaf8; --fg: #1f2328; --muted: #6b7280; --leaf: #ffffff; --line: #4b6bfb; --border: #c9ccd1;
-  --d0: #eef2ff; --d1: #ecfdf5; --d2: #fff7ed; --d3: #fdf2f8; --panel: #ffffff; }
+  --d0: #eef2ff; --d1: #ecfdf5; --d2: #fff7ed; --d3: #fdf2f8; --panel: #ffffff; --inner: #c2410c; }
 @media (prefers-color-scheme: dark) {
   :root { --bg: #16181d; --fg: #e6e6e6; --muted: #9aa0a6; --leaf: #23262d; --line: #8ea2ff; --border: #444a55;
-    --d0: #1d2238; --d1: #172a24; --d2: #2d2219; --d3: #2c1a25; --panel: #1f2228; }
+    --d0: #1d2238; --d1: #172a24; --d2: #2d2219; --d3: #2c1a25; --panel: #1f2228; --inner: #fb923c; }
 }
 html, body { margin: 0; height: 100%; }
 body { display: flex; flex-direction: column; background: var(--bg); color: var(--fg); font: 13px system-ui, sans-serif; }
@@ -41,6 +41,8 @@ body { display: flex; flex-direction: column; background: var(--bg); color: var(
 rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--d2); } rect.d3 { fill: var(--d3); }
 .box.k-test text { fill: var(--muted); }
 .arrow .line { fill: none; stroke: var(--line); opacity: .7; }
+.arrow.self .line { stroke: var(--inner); stroke-dasharray: 4 3; }
+.arrow.self .count { fill: var(--inner); }
 .arrow .hit { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; }
 .arrow:hover .line { opacity: 1; }
 .arrow .count { font: 11px system-ui; fill: var(--line); text-anchor: middle; }

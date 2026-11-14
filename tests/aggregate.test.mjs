@@ -172,3 +172,27 @@ test("treeRows: file has children, search finds symbols", () => {
   assert.deepEqual(treeRows(ST, S(), new Set(), "go").map(r => r.id), ["pkg/", "pkg/a.py", "sym:K", "sym:km"]);
   assert.equal(revealPath(ST, "sym:km").join(","), "pkg/,pkg/a.py,sym:K");
 });
+
+// Review fixes: files/classes whose children are all hidden.
+const allHidden = S({expanded:["pkg/","pkg/a.py"], hidden:["sym:run","sym:K"]});
+test("treeRows: file with all symbols hidden is partial, not off", () => {
+  const rows = treeRows(ST, allHidden, new Set(["pkg/"]), "");
+  assert.equal(rows.find(r => r.id === "pkg/a.py").check, "partial");
+  assert.equal(rows.find(r => r.id === "pkg/").check, "partial");
+  assert.equal(treeRows(ST, S({hidden:["pkg/a.py"]}), new Set(["pkg/"]), "").find(r => r.id === "pkg/a.py").check, "off");
+});
+test("file with all symbols hidden stays toggleable, counts hidden", () => {
+  const open = visibleView(ST, SM, allHidden).boxes.find(b => b.id === "pkg/a.py");
+  assert.deepEqual([open.hasChildren, open.collapsed, open.childCount, open.hiddenCount], [true, false, 0, 2]);
+  const shut = visibleView(ST, SM, S({expanded:["pkg/"], hidden:["sym:run"]})).boxes.find(b => b.id === "pkg/a.py");
+  assert.deepEqual([shut.hasChildren, shut.collapsed, shut.childCount, shut.hiddenCount], [true, true, 1, 1]);
+  assert.equal(visibleView(ST, SM, S({expanded:["pkg/"]})).boxes.find(b => b.id === "pkg/__init__.py").hasChildren, false);
+});
+test("arrows between a frame and its own descendant are inner", () => {
+  const v = visibleView(ST, SM, S({expanded:["pkg/","pkg/a.py","pkg/b.py","sym:K"]}));
+  assert.equal(v.arrows.find(a => a.src === "pkg/a.py" && a.tgt === "sym:g").inner, false);
+  const m2 = { ...SM, edges: [...SM.edges, E("pkg/a.py","sym:run",1,"calls"), E("sym:km","sym:K",1,"calls")] };
+  const v2 = visibleView(buildTree(m2), m2, S({expanded:["pkg/","pkg/a.py","sym:K"]}));
+  assert.equal(v2.arrows.find(a => a.src === "pkg/a.py" && a.tgt === "sym:run").inner, true);
+  assert.equal(v2.arrows.find(a => a.src === "sym:km" && a.tgt === "sym:K").inner, true);
+});

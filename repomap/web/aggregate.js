@@ -62,8 +62,9 @@ export function visibleView(tree, model, state) {
       if (!shown(ch)) continue;
       const dir = ch.type === "dir" || ch.type === "extroot", container = !isLeaf(ch);
       boxes.push({ id: ch.id, name: ch.name, type: ch.type, parent: n.id, loc: ch.loc,
-        collapsed: container && !isOpen(ch), fileCount: dir ? leafCount(ch) : 0,
-        childCount: container && !dir ? ch.children.filter(shown).length : 0 });
+        collapsed: container && !isOpen(ch), fileCount: dir ? leafCount(ch) : 0, hasChildren: container,
+        childCount: container && !dir ? ch.children.filter(shown).length : 0,
+        hiddenCount: container && !dir ? ch.children.filter((c) => allowedLeaf(c, state) && isHidden(c, state.hidden)).length : 0 });
       visible.add(ch.id);
       if (container && isOpen(ch)) walk(ch);
     }
@@ -76,6 +77,7 @@ export function visibleView(tree, model, state) {
     while (n && !visible.has(n.id)) n = n.parent;
     return n ? n.id : null;
   };
+  const isAnc = (a, d) => { for (let n = byId.get(d)?.parent; n; n = n.parent) if (n.id === a) return true; return false; };
   const merged = new Map();
   for (const e of model.edges) {
     const srcNode = byId.get(e.src);
@@ -84,7 +86,7 @@ export function visibleView(tree, model, state) {
     if (s === null || t === null || s === t) continue;
     const key = s + "\u0000" + t;
     let a = merged.get(key);
-    if (!a) merged.set(key, a = { src: s, tgt: t, count: 0, by_rel: {}, samples: [] });
+    if (!a) merged.set(key, a = { src: s, tgt: t, inner: isAnc(s, t) || isAnc(t, s), count: 0, by_rel: {}, samples: [] });
     a.count += e.count;
     for (const [r, c] of Object.entries(e.by_rel)) a.by_rel[r] = (a.by_rel[r] || 0) + c;
     if (a.samples.length < 20) a.samples.push(...e.samples.slice(0, 20 - a.samples.length));
@@ -141,7 +143,8 @@ export function treeRows(tree, state, treeOpen, query) {
   const matches = (n) => nameHit(n) || n.children.some((c) => allowed(c, state) && matches(c));
   const check = (n) => {
     const leaves = [];
-    (function collect(m) { if (isLeaf(m)) leaves.push(m); else m.children.forEach((c) => allowed(c, state) && collect(c)); })(n);
+    // A file/class counts itself: the map draws it even when all its children are hidden.
+    (function collect(m) { if (isLeaf(m) || isCode(m)) leaves.push(m); if (!isLeaf(m)) m.children.forEach((c) => allowed(c, state) && collect(c)); })(n);
     const on = leaves.filter((l) => !isHidden(l, state.hidden)).length;
     return on === 0 ? "off" : on < leaves.length ? "partial" : "on";
   };
