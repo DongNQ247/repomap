@@ -77,7 +77,8 @@
         const t = el("text", { x: (m.x + m2.x) / 2, y: (m.y + m2.y) / 2 - 4, class: "count" }, grp);
         t.textContent = a.count;
         grp.addEventListener("mouseenter", () => { if (!pinned) show(a); });
-        grp.addEventListener("click", (ev) => { ev.stopPropagation(); pinned = a; show(a); });
+        grp.addEventListener("mouseleave", () => { if (!pinned) panel.hidden = true; });
+        grp.addEventListener("click", (ev) => { ev.stopPropagation(); if (dragged) return; pinned = a; show(a); });
       }
     }
   }
@@ -100,6 +101,7 @@
   async function render() {
     const my = ++seq;
     const view = RepoMap.visibleView(tree, model, state);
+    pinned = null; panel.hidden = true; // old arrow objects are gone after re-layout
     $("stats").textContent = `${view.boxes.length} ô, ${view.arrows.length} mũi tên`;
     try {
       const g = await elk.layout(toElk(view));
@@ -110,19 +112,27 @@
     }
   }
 
+  const tooBig = () => {
+    const n = RepoMap.visibleView(tree, model, state).total;
+    return n > MAX_VISIBLE && !confirm(`Sẽ hiện ${n} mục, có thể chậm. Tiếp tục?`);
+  };
+
   function toggle(id) {
     if (state.expanded.has(id)) {
       state.expanded.delete(id);
     } else {
       state.expanded.add(id);
-      const n = RepoMap.visibleView(tree, model, state).total;
-      if (n > MAX_VISIBLE && !confirm(`Sẽ hiện ${n} mục, có thể chậm. Tiếp tục?`)) { state.expanded.delete(id); return; }
+      if (tooBig()) { state.expanded.delete(id); return; }
     }
     render();
   }
 
   for (const [id, key] of [["opt-tests", "showTests"], ["opt-docs", "showDocs"], ["opt-ext", "showExternal"]]) {
-    $(id).addEventListener("change", (ev) => { state[key] = ev.target.checked; render(); });
+    $(id).addEventListener("change", (ev) => {
+      state[key] = ev.target.checked;
+      if (ev.target.checked && tooBig()) { state[key] = ev.target.checked = false; return; }
+      render();
+    });
   }
   $("collapse-all").addEventListener("click", () => { state.expanded.clear(); render(); });
   svg.addEventListener("click", () => { if (dragged) return; pinned = null; panel.hidden = true; });
@@ -136,9 +146,10 @@
     const f = Math.exp(-ev.deltaY * 0.0015), nk = Math.min(4, Math.max(0.05, k * f));
     tx = px - (px - tx) * (nk / k); ty = py - (py - ty) * (nk / k); k = nk; apply();
   }, { passive: false });
-  svg.addEventListener("pointerdown", (ev) => { drag = { x: ev.clientX - tx, y: ev.clientY - ty, }; dragged = false; });
+  svg.addEventListener("pointerdown", (ev) => { drag = { x: ev.clientX - tx, y: ev.clientY - ty, sx: ev.clientX, sy: ev.clientY }; dragged = false; });
   window.addEventListener("pointermove", (ev) => {
     if (!drag) return;
+    if (!dragged && Math.hypot(ev.clientX - drag.sx, ev.clientY - drag.sy) <= 4) return;
     tx = ev.clientX - drag.x; ty = ev.clientY - drag.y; dragged = true; apply();
   });
   window.addEventListener("pointerup", () => { drag = null; });
