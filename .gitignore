@@ -3,3 +3,4 @@ out/
 .superpowers/
 dist/
 .venv/
+spec/
