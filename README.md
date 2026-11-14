@@ -3,13 +3,35 @@
 Draws a whole-repo map from graphify's `graph.json`: folders are frames, files are boxes, and
 file→file arrows (`calls`, `imports`, `imports_from`) carry a count. Output is one self-contained HTML file that works offline.
 
+## Requirements
+
+- Python 3.10+ (standard library only).
+- [graphify](https://pypi.org/project/graphifyy/) to build the graph: `uv tool install graphifyy`, then `graphify update .` in your project.
+
+## Install
+
 ```
-python3 -m repomap path/to/graphify-out/graph.json -o out/map.html
+uv tool install git+https://github.com/DongNQ247/repomap
+uv tool install git+https://github.com/DongNQ247/repomap@v1.0.0   # pinned version
+uv tool upgrade repomap
+uv tool uninstall repomap
 ```
 
-By default it writes `repomap.html` next to `graph.json`. Python 3.10+ standard library only.
+## Command line
 
-## Usage
+```
+repomap                    # reads ./graphify-out/graph.json, writes graphify-out/map.html
+repomap PATH               # PATH is a graph.json, or a folder containing graphify-out/graph.json
+repomap -o out/map.html    # write somewhere else
+repomap -q                 # print only the absolute path of the written file
+repomap --version
+```
+
+An existing `map.html` is overwritten. The browser is not opened; the command prints a `file://` link.
+If `graph.json` is missing, repomap prints how to install graphify and build it, and exits with code 1.
+Invalid JSON, a file that is not a graphify graph, or an unwritable output also exit with code 1; bad arguments exit with code 2.
+
+## Using the map
 
 - Click a folder to expand/collapse it. All folders start collapsed; arrows into a collapsed folder are merged and their counts summed.
 - Hover an arrow to see its breakdown by relation and the symbol pairs with `file:line`. Click to pin, click the background to unpin.
@@ -41,3 +63,7 @@ By default it writes `repomap.html` next to `graph.json`. Python 3.10+ standard 
 python3 -m unittest discover tests -v
 node --test tests/*.test.mjs
 ```
+
+## License
+
+MIT
