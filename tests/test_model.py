@@ -5,6 +5,7 @@ from repomap.load import load_graph
 from repomap.model import build_model, classify
 
 FIXTURE = Path(__file__).parent / "fixtures" / "mini_graph.json"
+SYM = Path(__file__).parent / "fixtures" / "sym_graph.json"
 
 
 def m():
@@ -40,6 +41,32 @@ class TestModel(unittest.TestCase):
         self.assertIn(("pkg/a.py", "ext:Path"), {(x["src"], x["tgt"]) for x in model["edges"]})
         self.assertIn("pkg/lone.py", [f["path"] for f in model["files"]])
         self.assertEqual([f["path"] for f in model["files"]], sorted(f["path"] for f in model["files"]))
+
+
+def ms():
+    return build_model(*load_graph(SYM))
+
+
+class TestSymbols(unittest.TestCase):
+    def test_symbols(self):
+        s = {x["id"]: x for x in ms()["symbols"]}
+        self.assertEqual(set(s), {"sym:run", "sym:K", "sym:km", "sym:g", "sym:t1"})
+        self.assertEqual(s["sym:km"]["parent"], "sym:K")
+        self.assertEqual(s["sym:run"]["parent"], "pkg/a.py")
+        self.assertEqual((s["sym:K"]["kind"], s["sym:run"]["kind"]), ("class", "func"))
+        self.assertEqual(s["sym:run"]["loc"], "L3")
+
+    def test_endpoints(self):
+        e = {(x["src"], x["tgt"]): x for x in ms()["edges"]}
+        self.assertIn(("sym:run", "sym:g"), e)
+        self.assertEqual(e[("sym:run", "sym:g")]["by_rel"], {"calls": 1})      # indirect_call bỏ
+        self.assertIn(("sym:km", "sym:g"), e)
+        self.assertIn(("sym:run", "sym:km"), e)                                # cùng file, khác ký hiệu
+        self.assertIn(("pkg/a.py", "pkg/b.py"), e)                             # import ở cấp file
+        self.assertIn(("pkg/a.py", "sym:g"), e)                                # cấp module → hàm
+
+    def test_v1_fixture_unchanged(self):
+        self.assertEqual(m()["symbols"], [])   # mini_graph không có contains cùng file
 
 
 if __name__ == "__main__":

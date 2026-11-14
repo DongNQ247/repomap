@@ -1,0 +1,29 @@
+{"directed": true, "multigraph": false, "graph": {},
+ "nodes": [
+  {"id": "fa", "label": "a.py", "source_file": "pkg/a.py", "file_type": "code", "source_location": "L1"},
+  {"id": "run", "label": "run()", "source_file": "pkg/a.py", "file_type": "code", "source_location": "L3"},
+  {"id": "K", "label": "K", "source_file": "pkg/a.py", "file_type": "code", "source_location": "L6", "_callable_class": true},
+  {"id": "km", "label": ".go()", "source_file": "pkg/a.py", "file_type": "code", "source_location": "L7"},
+  {"id": "doc", "label": "\"\"\"doc\"\"\"", "source_file": "pkg/a.py", "file_type": "rationale", "source_location": "L4"},
+  {"id": "fb", "label": "b.py", "source_file": "pkg/b.py", "file_type": "code", "source_location": "L1"},
+  {"id": "g", "label": "g()", "source_file": "pkg/b.py", "file_type": "code", "source_location": "L2"},
+  {"id": "ti", "label": "__init__.py", "source_file": "pkg/__init__.py", "file_type": "code"},
+  {"id": "ft", "label": "test_a.py", "source_file": "tests/test_a.py", "file_type": "code"},
+  {"id": "t1", "label": "test_run()", "source_file": "tests/test_a.py", "file_type": "code", "source_location": "L2"}
+ ],
+ "links": [
+  {"source": "fa", "target": "run", "relation": "contains"},
+  {"source": "fa", "target": "K", "relation": "contains"},
+  {"source": "K", "target": "km", "relation": "method"},
+  {"source": "fa", "target": "doc", "relation": "contains"},
+  {"source": "doc", "target": "run", "relation": "rationale_for"},
+  {"source": "fb", "target": "g", "relation": "contains"},
+  {"source": "ft", "target": "t1", "relation": "contains"},
+  {"source": "run", "target": "g", "relation": "calls", "source_file": "pkg/a.py", "source_location": "L4"},
+  {"source": "km", "target": "g", "relation": "calls", "source_file": "pkg/a.py", "source_location": "L8"},
+  {"source": "run", "target": "km", "relation": "calls", "source_file": "pkg/a.py", "source_location": "L5"},
+  {"source": "fa", "target": "fb", "relation": "imports_from", "source_file": "pkg/a.py", "source_location": "L1"},
+  {"source": "fa", "target": "g", "relation": "calls", "source_file": "pkg/a.py", "source_location": "L10"},
+  {"source": "run", "target": "g", "relation": "indirect_call", "source_file": "pkg/a.py", "source_location": "L4"},
+  {"source": "t1", "target": "run", "relation": "calls", "source_file": "tests/test_a.py", "source_location": "L3"}
+ ]}

@@ -18,8 +18,25 @@ def classify(path):
     return "code"
 
 
+def _line(loc):
+    m = re.search(r"\d+", loc or "")
+    return int(m.group()) if m else 0
+
+
 def build_model(nodes, links):
-    def end(nid):
+    # Symbol = code node contained (contains/method) by a node of the same file; value = parent id.
+    code = lambda nid: nodes[nid].get("file_type") == "code" and nodes[nid].get("source_file")
+    parent_of, has_method = {}, set()
+    for l in links:
+        if l["relation"] in ("contains", "method") and code(l["tgt"]) \
+                and nodes[l["src"]].get("source_file") == nodes[l["tgt"]]["source_file"]:
+            parent_of.setdefault(l["tgt"], l["src"])
+        if l["relation"] == "method":
+            has_method.add(l["src"])
+
+    def end(nid, rel=""):
+        if rel == "calls" and nid in parent_of:
+            return "sym:" + nid
         n = nodes[nid]
         return n.get("source_file") or "ext:" + str(n.get("label", nid))
 
@@ -29,7 +46,7 @@ def build_model(nodes, links):
     for l in links:
         if l["relation"] not in ARROW_RELS:
             continue
-        s, t = end(l["src"]), end(l["tgt"])
+        s, t = end(l["src"], l["relation"]), end(l["tgt"], l["relation"])
         if s == t:
             continue
         for key in (s, t):
@@ -45,7 +62,18 @@ def build_model(nodes, links):
                 "rel": l["relation"],
                 "loc": f"{l.get('source_file', '')}:{l.get('source_location', '')}",
             })
+    symbols = []
+    for nid, p in parent_of.items():
+        n = nodes[nid]
+        symbols.append({
+            "id": "sym:" + nid, "name": n.get("label", nid), "file": n["source_file"],
+            "parent": "sym:" + p if p in parent_of else n["source_file"],
+            "kind": "class" if nid in has_method or n.get("_callable_class") else "func",
+            "loc": n.get("source_location") or "",
+        })
+    symbols.sort(key=lambda x: (x["file"], _line(x["loc"]), x["name"]))
     return {
+        "symbols": symbols,
         "files": [{"path": f, "kind": classify(f)} for f in files],
         "external": sorted(external.values(), key=lambda x: x["id"]),
         "edges": list(edges.values()),
