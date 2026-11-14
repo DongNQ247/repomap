@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildTree, visibleView, absoluteLayout, revealPath, treeRows } from "../repomap/web/aggregate.js";
+import { buildTree, visibleView, absoluteLayout, revealPath, treeRows, unhide } from "../repomap/web/aggregate.js";
 
 // Same content as tests/fixtures/mini_graph.json after build_model.
 const E = (src, tgt, count, rel) => ({ src, tgt, count, by_rel: { [rel]: count }, samples: [] });
@@ -112,4 +112,20 @@ test("treeRows: check states", () => {
   assert.equal(c(["pkg/sub/b.py"], "pkg/"), "partial");
   assert.equal(c(["pkg/"], "pkg/sub/b.py"), "off");
   assert.equal(c([], "pkg/"), "on");
+});
+test("unhide: file inside hidden folder becomes the only visible one on its path", () => {
+  const ids = (s) => [...s].sort();
+  assert.deepEqual(ids(unhide(tree, new Set(["pkg/"]), "pkg/sub/b.py")), ["pkg/a.py", "pkg/lone.py"]);
+  assert.deepEqual(ids(unhide(tree, new Set(["pkg/", "lib/"]), "pkg/a.py")), ["lib/", "pkg/lone.py", "pkg/sub/"]);
+  assert.deepEqual(ids(unhide(tree, new Set(["pkg/sub/b.py", "pkg/a.py"]), "pkg/")), []);
+  assert.deepEqual(ids(unhide(tree, new Set(["lib/c.py"]), "lib/c.py")), []);
+});
+test("treeRows: folder matching by name lists its children", () => {
+  const rows = treeRows(tree, S(), new Set(), "sub");
+  assert.deepEqual(rows.map(r => r.id), ["pkg/", "pkg/sub/", "pkg/sub/b.py"]);
+  assert.deepEqual(treeRows(tree, S(), new Set(), "pkg").map(r => r.id), ["pkg/", "pkg/a.py", "pkg/lone.py", "pkg/sub/"]);
+});
+test("treeRows: folder with every allowed leaf hidden is off", () => {
+  const r = treeRows(tree, S({ hidden: ["pkg/a.py", "pkg/lone.py", "pkg/sub/b.py"] }), new Set(), "");
+  assert.equal(r.find(x => x.id === "pkg/").check, "off");
 });

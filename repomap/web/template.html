@@ -5,16 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Repo Map</title>
 <style>
-:root { --bg: #fafaf8; --fg: #1f2328; --muted: #6b7280; --leaf: #ffffff; --line: #4b6bfb; --border: #c9ccd1;
+:root { color-scheme: light dark; --bg: #fafaf8; --fg: #1f2328; --muted: #6b7280; --leaf: #ffffff; --line: #4b6bfb; --border: #c9ccd1;
   --d0: #eef2ff; --d1: #ecfdf5; --d2: #fff7ed; --d3: #fdf2f8; --panel: #ffffff; }
 @media (prefers-color-scheme: dark) {
   :root { --bg: #16181d; --fg: #e6e6e6; --muted: #9aa0a6; --leaf: #23262d; --line: #8ea2ff; --border: #444a55;
     --d0: #1d2238; --d1: #172a24; --d2: #2d2219; --d3: #2c1a25; --panel: #1f2228; }
 }
-html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 13px system-ui, sans-serif; }
+html, body { margin: 0; height: 100%; }
+body { display: flex; flex-direction: column; background: var(--bg); color: var(--fg); font: 13px system-ui, sans-serif; }
 #bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--border); }
 #stats { color: var(--muted); margin-left: auto; }
-#main { display: flex; height: calc(100% - 42px); }
+#main { display: flex; flex: 1; min-height: 0; }
 #map { display: block; flex: 1; min-width: 0; height: 100%; cursor: grab; }
 #side { width: 280px; flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--panel); }
 #side[hidden] { display: none; }

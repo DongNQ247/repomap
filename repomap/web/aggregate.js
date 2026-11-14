@@ -111,26 +111,41 @@ export function revealPath(tree, id) {
   return out;
 }
 
-// Rows of the side tree panel, in tree order.
+// Hidden set after re-showing `id`: drop it and its hidden descendants; for each hidden
+// ancestor, unhide it but hide its other children, so only `id` (and its path) appears.
+export function unhide(tree, hidden, id) {
+  const self = new Set([id]), path = [...revealPath(tree, id), id];
+  const out = new Set([...hidden].filter((h) => !isHidden(tree.byId.get(h), self)));
+  let covered = false;
+  for (let i = 0; i < path.length - 1; i++) {
+    covered = out.delete(path[i]) || covered;
+    if (covered) for (const c of tree.byId.get(path[i]).children) if (c.id !== path[i + 1]) out.add(c.id);
+  }
+  return out;
+}
+
+// Rows of the side tree panel, in tree order. A folder whose name matches the query lists
+// all its children; deeper levels then follow treeOpen as without a query.
 export function treeRows(tree, state, treeOpen, query) {
-  const q = (query || "").toLowerCase(), rows = [];
-  const matches = (n) => n.name.toLowerCase().includes(q) || n.children.some((c) => allowed(c, state) && matches(c));
+  const q0 = (query || "").toLowerCase(), rows = [];
+  const nameHit = (n) => n.name.toLowerCase().includes(q0);
+  const matches = (n) => nameHit(n) || n.children.some((c) => allowed(c, state) && matches(c));
   const check = (n) => {
-    if (isHidden(n, state.hidden)) return "off";
-    if (isLeaf(n)) return "on";
-    const anyHidden = (m) => m.children.some((c) => allowed(c, state) && (state.hidden.has(c.id) || anyHidden(c)));
-    return state.hidden && anyHidden(n) ? "partial" : "on";
+    const leaves = [];
+    (function collect(m) { if (isLeaf(m)) leaves.push(m); else m.children.forEach((c) => allowed(c, state) && collect(c)); })(n);
+    const on = leaves.filter((l) => !isHidden(l, state.hidden)).length;
+    return on === 0 ? "off" : on < leaves.length ? "partial" : "on";
   };
-  (function walk(n, depth) {
+  (function walk(n, depth, q) { // q: "" once inside a name-matched folder
     for (const ch of n.children) {
       if (!allowed(ch, state) || (q && !matches(ch))) continue;
       const hasChildren = !isLeaf(ch);
       const open = hasChildren && (q ? true : treeOpen.has(ch.id));
       rows.push({ id: ch.id, name: ch.name, type: ch.type, depth, hasChildren, open, check: check(ch) });
-      if (open) walk(ch, depth + 1);
+      if (open) walk(ch, depth + 1, nameHit(ch) ? "" : q);
     }
-  })(tree, 0);
+  })(tree, 0, q0);
   return rows;
 }
 
-globalThis.RepoMap = { buildTree, visibleView, absoluteLayout, revealPath, treeRows };
+globalThis.RepoMap = { buildTree, visibleView, absoluteLayout, revealPath, treeRows, unhide };

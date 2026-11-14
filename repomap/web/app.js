@@ -131,11 +131,14 @@
   }
 
   function drawTree() {
-    const box = $("tree");
+    const box = $("tree"), a = document.activeElement;
+    // Rebuilding drops focus; remember the focused control by row id + class to restore it.
+    const keep = box.contains(a) ? [a.closest(".row").dataset.id, a.className] : null;
     box.textContent = "";
     for (const r of RepoMap.treeRows(tree, state, treeOpen, $("tree-search").value.trim())) {
       const row = document.createElement("div");
       row.className = "row" + (r.check === "off" ? " off" : "");
+      row.dataset.id = r.id;
       row.style.paddingLeft = 8 + r.depth * 14 + "px";
       const tw = document.createElement(r.hasChildren ? "button" : "span");
       tw.className = "tw";
@@ -145,7 +148,7 @@
         tw.addEventListener("click", () => { treeOpen.has(r.id) ? treeOpen.delete(r.id) : treeOpen.add(r.id); drawTree(); });
       }
       const cb = document.createElement("input");
-      cb.type = "checkbox"; cb.checked = r.check === "on"; cb.indeterminate = r.check === "partial";
+      cb.type = "checkbox"; cb.className = "cb"; cb.checked = r.check === "on"; cb.indeterminate = r.check === "partial";
       cb.setAttribute("aria-label", "Show " + r.id);
       cb.addEventListener("change", () => setShown(r.id, cb.checked));
       const name = document.createElement("span");
@@ -153,13 +156,14 @@
       if (r.check !== "off") name.addEventListener("click", () => focusOn(r.id));
       row.append(tw, cb, name);
       box.appendChild(row);
+      if (keep && keep[0] === r.id) row.querySelector("." + keep[1])?.focus();
     }
   }
 
   function setShown(id, on) {
     if (on) {
-      const before = new Set(state.hidden);
-      for (const h of before) if (h === id || (/[/:]$/.test(id) && h.startsWith(id))) state.hidden.delete(h); // container descendants share its id prefix
+      const before = state.hidden;
+      state.hidden = RepoMap.unhide(tree, before, id);
       if (tooBig()) state.hidden = before;
     } else state.hidden.add(id);
     render(); drawTree();
@@ -185,7 +189,12 @@
     });
   }
   $("collapse-all").addEventListener("click", () => { state.expanded.clear(); render(); drawTree(); });
-  $("show-all").addEventListener("click", () => { state.hidden.clear(); render(); drawTree(); });
+  $("show-all").addEventListener("click", () => {
+    const before = state.hidden;
+    state.hidden = new Set();
+    if (tooBig()) { state.hidden = before; return; }
+    render(); drawTree();
+  });
   $("tree-search").addEventListener("input", drawTree);
   const setSide = (open) => { $("side").hidden = !open; $("side-toggle").setAttribute("aria-expanded", String(open)); };
   $("side-toggle").addEventListener("click", () => setSide($("side").hidden));
