@@ -1,0 +1,18 @@
+[project]
+name = "repomap"
+version = "1.0.0"
+description = "Render graphify's graph.json as an interactive nested file/folder call map"
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+dependencies = []
+
+[project.scripts]
+repomap = "repomap.__main__:main"
+
+[build-system]
+requires = ["uv_build>=0.12,<0.13"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = ""
