@@ -19,17 +19,30 @@ export function buildTree(model) {
   return root;
 }
 
+// Filter-button rule for a leaf (file or external symbol); ignores `hidden`.
+const allowedLeaf = (n, state) => n.type === "file" ? (state.showDocs || n.kind !== "doc") : state.showExternal;
+const isLeaf = (n) => n.type === "file" || n.type === "ext";
+
+// True if the node or any ancestor is in `hidden`.
+export function isHidden(n, hidden) {
+  if (!hidden) return false;
+  for (; n; n = n.parent) if (hidden.has(n.id)) return true;
+  return false;
+}
+
+// Filter-button rule for any node: leaves by allowedLeaf, containers if they hold an allowed leaf.
+export function allowed(n, state) {
+  return isLeaf(n) ? allowedLeaf(n, state) : n.children.some((c) => allowed(c, state));
+}
+
 export function visibleView(tree, model, state) {
   const byId = tree.byId;
-  const shown = (n) => n.type === "file" ? (state.showDocs || n.kind !== "doc")
-    : n.type === "ext" ? state.showExternal
-    : n.type === "extroot" ? state.showExternal && n.children.length > 0
-    : leafCount(n) > 0;
+  const shown = (n) => isLeaf(n) ? allowedLeaf(n, state) && !isHidden(n, state.hidden) : leafCount(n) > 0;
   const counts = new Map();
   function leafCount(n) {
     if (counts.has(n.id)) return counts.get(n.id);
     let c = 0;
-    for (const ch of n.children) c += (ch.type === "file" || ch.type === "ext") ? (shown(ch) ? 1 : 0) : leafCount(ch);
+    for (const ch of n.children) c += isLeaf(ch) ? (shown(ch) ? 1 : 0) : leafCount(ch);
     counts.set(n.id, c);
     return c;
   }
@@ -91,4 +104,33 @@ export function absoluteLayout(g) {
   return { pos, edges };
 }
 
-globalThis.RepoMap = { buildTree, visibleView, absoluteLayout };
+// Ancestor folder/frame ids of `id` (outermost first, root excluded); [] if unknown.
+export function revealPath(tree, id) {
+  const out = [];
+  for (let n = tree.byId.get(id)?.parent; n && n.id !== ""; n = n.parent) out.unshift(n.id);
+  return out;
+}
+
+// Rows of the side tree panel, in tree order.
+export function treeRows(tree, state, treeOpen, query) {
+  const q = (query || "").toLowerCase(), rows = [];
+  const matches = (n) => n.name.toLowerCase().includes(q) || n.children.some((c) => allowed(c, state) && matches(c));
+  const check = (n) => {
+    if (isHidden(n, state.hidden)) return "off";
+    if (isLeaf(n)) return "on";
+    const anyHidden = (m) => m.children.some((c) => allowed(c, state) && (state.hidden.has(c.id) || anyHidden(c)));
+    return state.hidden && anyHidden(n) ? "partial" : "on";
+  };
+  (function walk(n, depth) {
+    for (const ch of n.children) {
+      if (!allowed(ch, state) || (q && !matches(ch))) continue;
+      const hasChildren = !isLeaf(ch);
+      const open = hasChildren && (q ? true : treeOpen.has(ch.id));
+      rows.push({ id: ch.id, name: ch.name, type: ch.type, depth, hasChildren, open, check: check(ch) });
+      if (open) walk(ch, depth + 1);
+    }
+  })(tree, 0);
+  return rows;
+}
+
+globalThis.RepoMap = { buildTree, visibleView, absoluteLayout, revealPath, treeRows };

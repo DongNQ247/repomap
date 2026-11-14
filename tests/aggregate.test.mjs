@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildTree, visibleView, absoluteLayout } from "../repomap/web/aggregate.js";
+import { buildTree, visibleView, absoluteLayout, revealPath, treeRows } from "../repomap/web/aggregate.js";
 
 // Same content as tests/fixtures/mini_graph.json after build_model.
 const E = (src, tgt, count, rel) => ({ src, tgt, count, by_rel: { [rel]: count }, samples: [] });
@@ -18,7 +18,7 @@ const model = {
   ],
 };
 const tree = buildTree(model);
-const S = (o = {}) => ({ showTests: false, showDocs: false, showExternal: false, ...o, expanded: new Set(o.expanded || []) });
+const S = (o = {}) => ({ showTests: false, showDocs: false, showExternal: false, ...o, expanded: new Set(o.expanded || []), hidden: new Set(o.hidden || []) });
 const arrowSet = (v) => v.arrows.map((a) => `${a.src}->${a.tgt}:${a.count}`).sort();
 
 test("initial view: top level only, arrows lifted", () => {
@@ -67,4 +67,49 @@ test("absoluteLayout offsets edge points by their container", () => {
   assert.deepEqual(pos.get("p/b"), { x: 200, y: 80, width: 40, height: 30 });
   assert.deepEqual(edges[0].sections, [[{ x: 150, y: 95 }, { x: 200, y: 95 }]]);
   assert.deepEqual(edges[1].sections, [[{ x: 1, y: 2 }, { x: 3, y: 4 }, { x: 5, y: 6 }]]);
+});
+
+test("hide file: its arrows vanish, siblings' remain", () => {  // Review Focus 1
+  const v = visibleView(tree, model, S({ expanded: ["pkg/"], hidden: ["pkg/sub/b.py"] }));
+  assert.ok(!v.boxes.some(b => b.id === "pkg/sub/"));           // sub/ chỉ có b.py → biến mất (Focus 2)
+  assert.ok(!arrowSet(v).some(s => s.includes("pkg/sub/")));
+  assert.ok(arrowSet(v).includes("pkg/a.py->lib/:1"));
+});
+test("hide inside collapsed folder subtracts only that file", () => {
+  const v = visibleView(tree, model, S({ hidden: ["pkg/a.py"] }));
+  assert.deepEqual(arrowSet(v), ["lib/->pkg/:1"]);              // c->b còn, a->c mất
+});
+test("hide folder hides subtree and lowers total", () => {
+  const a = visibleView(tree, model, S()), b = visibleView(tree, model, S({ hidden: ["lib/"] }));
+  assert.ok(!b.boxes.some(x => x.id === "lib/"));
+  assert.ok(b.total < a.total);
+});
+test("hidden survives filter toggle", () => {  // Review Focus 3
+  const v = visibleView(tree, model, S({ showDocs: true, hidden: ["README.md"] }));
+  assert.ok(!v.boxes.some(b => b.id === "README.md"));
+});
+test("revealPath", () => {
+  assert.deepEqual(revealPath(tree, "pkg/sub/b.py"), ["pkg/", "pkg/sub/"]);
+  assert.deepEqual(revealPath(tree, "ext:Path"), ["ext:"]);
+  assert.deepEqual(revealPath(tree, "nope"), []);
+});
+test("treeRows: collapsed, filters, open", () => {
+  const ids = (rows) => rows.map(r => r.id);
+  assert.deepEqual(ids(treeRows(tree, S(), new Set(), "")), ["lib/", "pkg/", "tests/"]);
+  assert.ok(ids(treeRows(tree, S({ showDocs: true, showExternal: true }), new Set(), "")).includes("README.md"));
+  const open = treeRows(tree, S(), new Set(["pkg/"]), "");
+  assert.deepEqual(ids(open), ["lib/", "pkg/", "pkg/a.py", "pkg/lone.py", "pkg/sub/", "tests/"]);
+  const sub = open.find(r => r.id === "pkg/sub/");
+  assert.equal(sub.open, false); assert.equal(sub.hasChildren, true); assert.equal(sub.depth, 1);
+});
+test("treeRows: search", () => {  // Review Focus 4
+  const rows = treeRows(tree, S(), new Set(), "B.P");
+  assert.deepEqual(rows.map(r => r.id), ["pkg/", "pkg/sub/", "pkg/sub/b.py"]);
+  assert.ok(rows.every(r => r.type === "file" || r.open));
+});
+test("treeRows: check states", () => {
+  const c = (h, id) => treeRows(tree, S({ hidden: h }), new Set(["pkg/", "pkg/sub/"]), "").find(r => r.id === id).check;
+  assert.equal(c(["pkg/sub/b.py"], "pkg/"), "partial");
+  assert.equal(c(["pkg/"], "pkg/sub/b.py"), "off");
+  assert.equal(c([], "pkg/"), "on");
 });
