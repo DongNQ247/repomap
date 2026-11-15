@@ -21,7 +21,16 @@
 html, body { margin: 0; height: 100%; }
 body { display: flex; flex-direction: column; background: var(--bg); color: var(--fg); font: 13px "JBMono", ui-monospace, monospace; }
 #bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--border); }
-#stats { color: var(--muted); margin-left: auto; }
+#stats { color: var(--muted); margin-left: auto; font-size: 11px; }
+#bar { gap: 10px; padding: 6px 12px; background: var(--panel); }
+#brand { font-weight: 700; font-size: 15px; letter-spacing: .18em; color: var(--accent); }
+#bar .sep { width: 1px; align-self: stretch; background: var(--border); }
+#bar .group-label { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+#bar .seg { display: inline-flex; }
+#bar .seg button + button { border-left: 0; }
+#bar button.icon { padding: 4px 6px; line-height: 0; }
+#mapwrap { position: relative; flex: 1; min-width: 0; display: flex; }
+#legend { position: absolute; left: 12px; bottom: 12px; background: var(--panel); border: 1px solid var(--border); padding: 4px 8px; pointer-events: none; }
 #main { display: flex; flex: 1; min-height: 0; }
 #map { display: block; flex: 1; min-width: 0; height: 100%; cursor: grab; }
 #side { width: 280px; flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--panel); }
@@ -83,8 +92,6 @@ rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--
   font: inherit; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; cursor: pointer; }
 #bar button:hover, #side-tools button:hover { border-color: var(--accent); color: var(--accent); }
 #bar button[aria-pressed="true"], #bar button[aria-expanded="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
-#bar label { text-transform: uppercase; letter-spacing: .06em; font-size: 11px; font-weight: 700; }
-#bar input[type=checkbox] { accent-color: var(--accent); }
 #tree-search { font: inherit; }
 .gridline { stroke: var(--grid); }
 #panel li { padding: 2px 0; border-bottom: 1px solid var(--border); list-style: none; }
@@ -93,14 +100,15 @@ rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--
 </head>
 <body>
 <div id="bar">
-  <button id="side-toggle" type="button" aria-controls="side" aria-expanded="true">Tree</button>
-  <label><input type="checkbox" id="opt-tests"> Test arrows</label>
-  <label><input type="checkbox" id="opt-docs"> Docs/config</label>
-  <label><input type="checkbox" id="opt-ext"> External</label>
+  <button id="side-toggle" class="icon" type="button" aria-controls="side" aria-expanded="true" aria-label="Toggle file tree" title="File tree"><svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><rect x="1.5" y="2.5" width="13" height="11" fill="none" stroke="currentColor"/><path d="M6 2.5v11" stroke="currentColor"/></svg></button>
+  <span id="brand">REPOMAP</span>
+  <span class="sep"></span>
+  <span class="group-label">Show</span>
+  <span class="seg"><button id="opt-tests" type="button" aria-pressed="false">Tests</button><button id="opt-docs" type="button" aria-pressed="false">Docs</button><button id="opt-ext" type="button" aria-pressed="false">External</button></span>
+  <span class="sep"></span>
   <button id="collapse-all" type="button">Collapse all</button>
-  <button id="theme-toggle" type="button" aria-label="Toggle dark mode">Dark</button>
-  <span id="legend"><svg width="24" height="8" aria-hidden="true"><line x1="0" y1="4" x2="24" y2="4"/></svg> added manually &middot; relations: calls &middot; imports &middot; creates &middot; reads</span>
   <span id="stats"></span>
+  <button id="theme-toggle" class="icon" type="button" aria-label="Toggle dark mode"></button>
 </div>
 <div id="main">
 <nav id="side" aria-label="File tree">
@@ -108,11 +116,14 @@ rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--
   <div id="tree"></div>
 </nav>
 <div class="grip" data-for="side" role="separator" aria-orientation="vertical" aria-label="Resize file tree" tabindex="0"></div>
+<div id="mapwrap">
 <svg id="map">
   <defs><pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" class="gridline"/></pattern><marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0,0L10,5L0,10z"/></marker></defs>
   <rect id="grid-bg" width="100%" height="100%" fill="url(#grid)"/>
   <g id="viewport"></g>
 </svg>
+<span id="legend"><svg width="24" height="8" aria-hidden="true"><line x1="0" y1="4" x2="24" y2="4"/></svg> added manually &middot; relations: calls &middot; imports &middot; creates &middot; reads</span>
+</div>
 <div class="grip" data-for="panel" role="separator" aria-orientation="vertical" aria-label="Resize details panel" tabindex="0"></div>
 <aside id="panel" aria-label="Details" hidden></aside>
 </div>

@@ -242,9 +242,11 @@
   }
 
   for (const [id, key] of [["opt-tests", "showTests"], ["opt-docs", "showDocs"], ["opt-ext", "showExternal"]]) {
-    $(id).addEventListener("change", (ev) => {
-      state[key] = ev.target.checked;
-      if (ev.target.checked && tooBig()) { state[key] = ev.target.checked = false; return; }
+    $(id).addEventListener("click", (ev) => {
+      const btn = ev.currentTarget, on = btn.getAttribute("aria-pressed") !== "true";
+      state[key] = on;
+      if (on && tooBig()) { state[key] = false; return; }
+      btn.setAttribute("aria-pressed", String(on));
       render(); drawTree();
     });
   }
@@ -262,7 +264,7 @@
   // Theme: explicit choice in data-theme, else follow the OS. Storage may throw (private mode, file://).
   const root = document.documentElement, darkOS = matchMedia("(prefers-color-scheme: dark)");
   const isDark = () => root.dataset.theme ? root.dataset.theme === "dark" : darkOS.matches;
-  const syncTheme = () => { const d = isDark(); $("theme-toggle").textContent = d ? "Light" : "Dark"; $("theme-toggle").setAttribute("aria-pressed", String(d)); };
+  const syncTheme = () => { const d = isDark(); $("theme-toggle").innerHTML = d ? '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5L13 13M3 13l1.5-1.5M11.5 4.5L13 3" stroke="currentColor"/></svg>' : '<svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path d="M13 10A6 6 0 0 1 6 3a6 6 0 1 0 7 7z" fill="none" stroke="currentColor"/></svg>'; $("theme-toggle").title = d ? "Light mode" : "Dark mode"; $("theme-toggle").setAttribute("aria-pressed", String(d)); };
   try { const t = localStorage.getItem("repomap-theme"); if (t === "light" || t === "dark") root.dataset.theme = t; } catch (e) {}
   $("theme-toggle").addEventListener("click", () => {
     root.dataset.theme = isDark() ? "light" : "dark";
