@@ -21,7 +21,7 @@ GUIDE = """
 repomap draws a map from graphify's output. To create it:
   1. install graphify:   uv tool install graphifyy
   2. build the graph:    graphify update .
-  3. run again:          repomap
+  3. run again:          repomap .
 Or pass a path:          repomap path/to/graph.json"""
 
 

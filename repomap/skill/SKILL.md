@@ -20,10 +20,10 @@ Never save answers on your own initiative.
 repomap note add <name> "<text>"   # save, or replace the existing note
 repomap note delete <name>
 repomap note ok <name>             # code changed, note still correct
-repomap                            # re-render repomap-out/map.html
+repomap .                          # re-render repomap-out/map.html (from the project root)
 ```
 
-After `note add`, `note delete` or `note ok`, run `repomap` so the map shows the change.
+After `note add`, `note delete` or `note ok`, run `repomap .` from the project root so the map shows the change.
 
 ## Naming components
 

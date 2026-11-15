@@ -20,7 +20,7 @@ uv tool uninstall repomap
 ## Command line
 
 ```
-repomap                    # reads ./graphify-out/graph.json, writes repomap-out/map.html
+repomap .                  # reads ./graphify-out/graph.json, writes repomap-out/map.html (same as plain `repomap`)
 repomap PATH               # PATH is a graph.json, or a folder containing graphify-out/graph.json
 repomap -o out/map.html    # write somewhere else
 repomap -q                 # print only the absolute path of the written file
@@ -37,7 +37,7 @@ Invalid JSON, a file that is not a graphify graph, or an unwritable output also 
 ## Notes
 
 Attach a plain-text note to a folder, file or symbol. Notes are saved in `repomap-out/notes.json`
-and shown on the map after the next `repomap` run.
+and shown on the map after the next `repomap .` run.
 
 ```
 repomap note add <name> "<text>"   # save, or replace the existing note
