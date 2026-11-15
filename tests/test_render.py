@@ -28,6 +28,13 @@ class TestRender(unittest.TestCase):
         self.assertEqual(html.count("</script>"), html.count("<script"))
         self.assertEqual(html.count("/*__APP__*/"), 1)  # only the file name; slot replaced once
 
+    def test_notes_embedded(self):
+        model = build_model(*load_graph(FIXTURE))
+        model["notes"] = {"pkg/a.py": {"name": "pkg/a.py", "text": "Runs the thing", "stale": True}}
+        html = render_html(model)
+        self.assertIn("Runs the thing", html)
+        self.assertIn("notesUnder", html)
+
     def test_cli(self):
         with tempfile.TemporaryDirectory() as tmp:
             out = Path(tmp) / "out.html"
@@ -47,7 +54,7 @@ class TestRender(unittest.TestCase):
             self.assertTrue(r.stderr)
 
     def test_ui_text_is_english(self):
-        allowed = set("▸▾→…")
+        allowed = set("▸▾→…📝✕")
         for rel in ["repomap/web/aggregate.js", "repomap/web/app.js", "repomap/web/template.html", "README.md"]:
             text = (ROOT / rel).read_text(encoding="utf-8")
             bad = sorted({ch for ch in text if ord(ch) > 127 and ch not in allowed})

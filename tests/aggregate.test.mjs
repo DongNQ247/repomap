@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { buildTree, visibleView, absoluteLayout, revealPath, treeRows, unhide } from "../repomap/web/aggregate.js";
+import { buildTree, visibleView, absoluteLayout, revealPath, treeRows, unhide, notesUnder } from "../repomap/web/aggregate.js";
 
 // Same content as tests/fixtures/mini_graph.json after build_model.
 const E = (src, tgt, count, rel) => ({ src, tgt, count, by_rel: { [rel]: count }, samples: [] });
@@ -195,4 +195,13 @@ test("arrows between a frame and its own descendant are inner", () => {
   const v2 = visibleView(buildTree(m2), m2, S({expanded:["pkg/","pkg/a.py","sym:K"]}));
   assert.equal(v2.arrows.find(a => a.src === "pkg/a.py" && a.tgt === "sym:run").inner, true);
   assert.equal(v2.arrows.find(a => a.src === "sym:km" && a.tgt === "sym:K").inner, true);
+});
+
+test("notesUnder lists descendant notes only", () => {
+  const notes = { "pkg/": { name: "pkg", text: "P", stale: false }, "pkg/a.py": { name: "pkg/a.py", text: "A\nmore", stale: true },
+    "pkg/sub/b.py": { name: "pkg/sub/b.py", text: "B", stale: false }, "lib/c.py": { name: "lib/c.py", text: "C", stale: false } };
+  assert.deepEqual(notesUnder(tree, notes, "pkg/").map((n) => n.id), ["pkg/a.py", "pkg/sub/b.py"]);
+  assert.deepEqual(notesUnder(tree, notes, "pkg/")[0], { id: "pkg/a.py", name: "pkg/a.py", text: "A\nmore", stale: true });
+  assert.deepEqual(notesUnder(tree, notes, "lib/c.py"), []);
+  assert.deepEqual(notesUnder(tree, {}, "nope"), []);
 });

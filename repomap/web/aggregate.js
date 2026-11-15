@@ -160,4 +160,16 @@ export function treeRows(tree, state, treeOpen, query) {
   return rows;
 }
 
-globalThis.RepoMap = { buildTree, visibleView, absoluteLayout, revealPath, treeRows, unhide };
+// Notes of every descendant of `id` (not `id` itself), in tree order.
+export function notesUnder(tree, notes, id) {
+  const out = [];
+  (function walk(n) {
+    for (const c of n.children) {
+      if (notes[c.id]) out.push({ id: c.id, ...notes[c.id] });
+      walk(c);
+    }
+  })(tree.byId.get(id) || { children: [] });
+  return out;
+}
+
+globalThis.RepoMap = { buildTree, visibleView, absoluteLayout, revealPath, treeRows, unhide, notesUnder };

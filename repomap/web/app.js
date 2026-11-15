@@ -11,7 +11,11 @@
   let focusId = null;
   const $ = (id) => document.getElementById(id);
   const svg = $("map"), viewport = $("viewport"), panel = $("panel");
-  let seq = 0, pinned = null, dragged = false;
+  let seq = 0, dragged = false, selected = null; // selected: box id or arrow object shown in the panel
+  const notes = model.notes || {};
+  const refs = new Map((model.symbols || []).map((x) => [x.id, x.ref]));
+  // Name the CLI uses: symbol ref, folder without trailing "/", file path.
+  const ref = (id) => refs.get(id) || id.replace(/\/$/, "");
 
   const el = (tag, attrs, parent) => {
     const e = document.createElementNS(SVGNS, tag);
@@ -19,7 +23,8 @@
     if (parent) parent.appendChild(e);
     return e;
   };
-  const label = (b) => {
+  const label = (b) => baseLabel(b) + (notes[b.id] ? " 📝" : "");
+  const baseLabel = (b) => {
     if (b.type === "file" || b.type === "class") {
       if (!b.hasChildren) return b.name;
       const n = b.childCount ? `${b.childCount} ${b.type === "file" ? "symbols" : "methods"}` : "0 shown";
@@ -74,14 +79,18 @@
     const boxLayer = el("g", {}, viewport), edgeLayer = el("g", {}, viewport);
     const drawNode = (n, ox, oy) => {
       const x = ox + n.x, y = oy + n.y, b = n.box;
-      const grp = el("g", { class: `box ${b.type}${b.id === focusId ? " focus" : ""}${b.collapsed ? " collapsed" : ""}${b.type === "file" ? " k-" + (tree.byId.get(b.id).kind || "") : ""}`, "data-id": b.id }, boxLayer);
+      const grp = el("g", { class: `box ${b.type}${b.id === focusId ? " focus" : ""}${notes[b.id] ? (notes[b.id].stale ? " stale" : " noted") : ""}${b.collapsed ? " collapsed" : ""}${b.type === "file" ? " k-" + (tree.byId.get(b.id).kind || "") : ""}`, "data-id": b.id }, boxLayer);
       const open = !!n.children;
       el("rect", { x, y, width: n.width, height: n.height, class: open ? `frame d${depth(b.id) % 4}` : "leaf", rx: b.type === "func" ? 10 : 4 }, grp);
       const t = el("text", { x: x + 8, y: y + 19 }, grp);
       t.textContent = label(b);
       const title = el("title", {}, grp);
       title.textContent = where(b.id);
-      if (container(b)) grp.addEventListener("click", (ev) => { ev.stopPropagation(); if (!dragged) toggle(b.id); });
+      grp.addEventListener("click", (ev) => {
+        ev.stopPropagation();
+        if (dragged) return;
+        if (container(b)) { select(b.id); toggle(b.id); } else if (b.type !== "ext") selected === b.id ? closePanel() : select(b.id);
+      });
       for (const c of n.children || []) drawNode(c, x, y);
     };
     for (const c of g.children || []) drawNode(c, 0, 0);
@@ -95,17 +104,47 @@
         const m = pts[Math.floor((pts.length - 1) / 2)], m2 = pts[Math.floor((pts.length - 1) / 2) + 1] || m;
         const t = el("text", { x: (m.x + m2.x) / 2, y: (m.y + m2.y) / 2 - 4, class: "count" }, grp);
         t.textContent = a.count;
-        grp.addEventListener("mouseenter", () => { if (!pinned) show(a); });
-        grp.addEventListener("mouseleave", () => { if (!pinned) panel.hidden = true; });
-        grp.addEventListener("click", (ev) => { ev.stopPropagation(); if (dragged) return; pinned = a; show(a); });
+        grp.addEventListener("click", (ev) => { ev.stopPropagation(); if (dragged) return; selected = a; show(a); });
       }
     }
   }
 
-  function show(a) {
+  const add = (tag, text, cls, parent = panel) => { const e = document.createElement(tag); e.textContent = text; if (cls) e.className = cls; parent.appendChild(e); return e; };
+  function openPanel(head) {
     panel.textContent = "";
-    const add = (tag, text, cls) => { const e = document.createElement(tag); e.textContent = text; if (cls) e.className = cls; panel.appendChild(e); return e; };
-    add("div", `${where(a.src)} → ${where(a.tgt)}`, "head");
+    const top = add("div", "", "top");
+    add("div", head, "head", top);
+    const x = add("button", "✕", "close", top);
+    x.type = "button"; x.setAttribute("aria-label", "Close details");
+    x.addEventListener("click", closePanel);
+    panel.hidden = false;
+  }
+  function closePanel() { selected = null; panel.hidden = true; }
+
+  const KIND = { dir: "folder", file: "file", class: "class", func: "function" };
+  function select(id) {
+    const n = tree.byId.get(id);
+    if (!n || !KIND[n.type]) return;
+    selected = id;
+    openPanel(KIND[n.type]);
+    add("div", where(id));
+    const note = notes[id], name = ref(id);
+    if (note) {
+      add("div", note.text, "note");
+      if (note.stale) { add("span", "may be outdated", "badge"); add("code", `Checked it? Run: repomap note ok ${name}`); }
+    } else {
+      add("div", 'No note yet. Ask your agent about it, then say "save it".', "more");
+      add("code", `repomap note add ${name} "..."`);
+    }
+    const under = RepoMap.notesUnder(tree, notes, id);
+    if (under.length) {
+      const ul = add("ul", "");
+      for (const u of under) add("li", `${u.name}: ${u.text.split("\n")[0]}` + (u.stale ? " (may be outdated)" : ""), "", ul);
+    }
+  }
+
+  function show(a) {
+    openPanel(`${where(a.src)} → ${where(a.tgt)}`);
     if (a.inner) add("div", `(within ${where(RepoMap.revealPath(tree, a.tgt).includes(a.src) ? a.src : a.tgt)})`, "more");
     add("div", `${a.count} links: ` + Object.entries(a.by_rel).map(([r, c]) => `${r} ${c}`).join(", "));
     const ul = add("ul", "");
@@ -115,13 +154,13 @@
       ul.appendChild(li);
     }
     if (a.count > a.samples.length) add("div", `… ${a.samples.length}/${a.count} samples`, "more");
-    panel.hidden = false;
   }
 
   async function render() {
     const my = ++seq;
     const view = RepoMap.visibleView(tree, model, state);
-    pinned = null; panel.hidden = true; // old arrow objects are gone after re-layout
+    // Old arrow objects are gone after re-layout; a selected box stays only while it is drawn.
+    if (selected && (typeof selected !== "string" || !view.boxes.some((b) => b.id === selected))) closePanel();
     $("stats").textContent = `${view.boxes.length} boxes, ${view.arrows.length} arrows`;
     try {
       const g = await elk.layout(toElk(view));
@@ -170,7 +209,7 @@
       cb.setAttribute("aria-label", "Show " + r.id);
       cb.addEventListener("change", () => setShown(r.id, cb.checked));
       const name = document.createElement("span");
-      name.className = "name t-" + r.type; name.textContent = r.name + (r.type === "dir" ? "/" : "");
+      name.className = "name t-" + r.type; name.textContent = r.name + (r.type === "dir" ? "/" : "") + (notes[r.id] ? " 📝" : "");
       name.title = where(r.id);
       if (r.check !== "off") name.addEventListener("click", () => focusOn(r.id));
       row.append(tw, cb, name);
@@ -218,7 +257,7 @@
   const setSide = (open) => { $("side").hidden = !open; $("side-toggle").setAttribute("aria-expanded", String(open)); };
   $("side-toggle").addEventListener("click", () => setSide($("side").hidden));
   setSide(window.innerWidth >= 640);
-  svg.addEventListener("click", () => { if (dragged) return; pinned = null; panel.hidden = true; });
+  svg.addEventListener("click", () => { if (!dragged) closePanel(); });
 
   // Pan/zoom without libraries.
   let tx = 20, ty = 20, k = 1, drag = null;

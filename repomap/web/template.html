@@ -6,10 +6,10 @@
 <title>Repo Map</title>
 <style>
 :root { color-scheme: light dark; --bg: #fafaf8; --fg: #1f2328; --muted: #6b7280; --leaf: #ffffff; --line: #4b6bfb; --border: #c9ccd1;
-  --d0: #eef2ff; --d1: #ecfdf5; --d2: #fff7ed; --d3: #fdf2f8; --panel: #ffffff; --inner: #c2410c; }
+  --d0: #eef2ff; --d1: #ecfdf5; --d2: #fff7ed; --d3: #fdf2f8; --panel: #ffffff; --inner: #c2410c; --stale: #ca8a04; --fresh: #16a34a; }
 @media (prefers-color-scheme: dark) {
   :root { --bg: #16181d; --fg: #e6e6e6; --muted: #9aa0a6; --leaf: #23262d; --line: #8ea2ff; --border: #444a55;
-    --d0: #1d2238; --d1: #172a24; --d2: #2d2219; --d3: #2c1a25; --panel: #1f2228; --inner: #fb923c; }
+    --d0: #1d2238; --d1: #172a24; --d2: #2d2219; --d3: #2c1a25; --panel: #1f2228; --inner: #fb923c; --stale: #facc15; --fresh: #4ade80; }
 }
 html, body { margin: 0; height: 100%; }
 body { display: flex; flex-direction: column; background: var(--bg); color: var(--fg); font: 13px system-ui, sans-serif; }
@@ -47,11 +47,22 @@ rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--
 .arrow:hover .line { opacity: 1; }
 .arrow .count { font: 11px system-ui; fill: var(--line); text-anchor: middle; }
 #head path { fill: var(--line); }
-#panel { position: fixed; right: 16px; bottom: 16px; max-width: min(560px, calc(100% - 32px)); max-height: 45%; overflow: auto;
-  background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font: 12px ui-monospace, monospace; }
+#panel { width: 320px; flex: none; overflow: auto; border-left: 1px solid var(--border); background: var(--panel);
+  padding: 10px 12px; font: 12px ui-monospace, monospace; box-sizing: border-box; }
+#panel[hidden] { display: none; }
+@media (max-width: 700px) { #panel { position: fixed; right: 0; top: 0; bottom: 0; width: min(320px, 100%); z-index: 2; } }
+#panel .top { display: flex; gap: 8px; align-items: flex-start; }
+#panel .top .head { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+#panel .close { flex: none; border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 2px; }
+#panel .close:hover { color: var(--fg); }
 #panel .head { font-weight: 600; margin-bottom: 4px; }
 #panel ul { margin: 6px 0 0; padding-left: 18px; }
 #panel .more { color: var(--muted); }
+#panel .note { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; font-family: system-ui, sans-serif; font-size: 13px; }
+#panel .badge { display: inline-block; color: var(--stale); border: 1px solid var(--stale); border-radius: 4px; padding: 0 4px; }
+#panel code { display: block; margin-top: 4px; color: var(--muted); overflow-wrap: anywhere; }
+.box.noted > rect { stroke: var(--fresh); }
+.box.stale > rect { stroke: var(--stale); stroke-width: 2; }
 </style>
 </head>
 <body>
@@ -72,8 +83,8 @@ rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--
   <defs><marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0,0L10,5L0,10z"/></marker></defs>
   <g id="viewport"></g>
 </svg>
+<aside id="panel" aria-label="Details" hidden></aside>
 </div>
-<div id="panel" hidden></div>
 <script id="model" type="application/json">__MODEL__</script>
 <script>/*__ELK__*/</script>
 <script>/*__AGGREGATE__*/</script>

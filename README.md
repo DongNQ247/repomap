@@ -62,7 +62,8 @@ Suggested: commit `repomap-out/notes.json`, and add `repomap-out/map.html` to `.
 ## Using the map
 
 - Click a folder to expand/collapse it. All folders start collapsed; arrows into a collapsed folder are merged and their counts summed.
-- Hover an arrow to see its breakdown by relation and the symbol pairs with `file:line`. Click to pin, click the background to unpin.
+- Click an arrow to see its breakdown by relation and the symbol pairs with `file:line` in the details panel on the right.
+- Click a folder, file or symbol to show its details and note in the right panel (folders and files also expand/collapse). Click a symbol again, the `x` button or the background to close it. Boxes with a note are outlined green, or yellow when the note may be outdated.
 - Scroll to zoom, drag to pan.
 - **Test arrows**: show arrows that start from test files (test boxes are always shown).
 - **Docs/config**: show `.md`, `.json`, `.yml`, `.toml`… files.
