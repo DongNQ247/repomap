@@ -42,15 +42,17 @@
   - `load_links(path) -> dict` — missing file → `{"nodes": {}, "edges": []}`; bad JSON/shape → `ValueError`.
   - `save_links(path, links) -> None`
   - `link_components(links, comps) -> dict` — returns new comps dict = comps + manual nodes not already in comps. Runtime file → `{"box": path, "kind": "file", "file": None, "start": 0, "end": None, "manual": True}` plus dir entries for its missing parent folders (`box` = `"a/b/"`, kind `dir`); concept → `{"box": "concept:"+name, "kind": "concept", "file": None, ...}`.
-  - `merge_links(model, links, comps) -> dict` — mutates model; returns `{"missing": [str], "found": [str]}`. Adds manual files to `model["files"]` as `{"path", "kind": classify(path), "manual": True}` (kept sorted), concepts to `model["concepts"] = [{"id","label"}]` (always set, maybe empty), edges to `model["edges"]` as `{"src": box, "tgt": box, "count": 1, "manual_count": 1, "by_rel": {rel: 1}, "samples": [{"from": src, "to": tgt, "rel": rel, "loc": "manual"}]}`. Existing graphify edges get no `manual_count` (treat as 0). An edge with an end not in comps → skipped, its `"src rel tgt"` string in `missing`. A manual file node that graphify already has → in `found`, not duplicated.
-- `fingerprint()` in notes.py must return `None` for comps with `file is None` (concept/runtime) — add `if comp.get("manual") or comp["kind"] == "concept": return None` there; `note_view` then must not mark stale when the stored hash is also `None` (already true: `None != None` is False).
+  - `merge_links(model, links, comps) -> dict` — mutates model; returns `{"missing": [str], "found": [str]}`. Adds manual files to `model["files"]` as `{"path", "kind": classify(path), "manual": True}` (kept sorted), concepts to `model["concepts"] = [{"id","label"}]` (always set, maybe empty), edges to `model["edges"]` as `{"src": box, "tgt": box, "count": 1, "manual_count": 1, "by_rel": {rel: 1}, "samples": [{"from": src, "to": tgt, "rel": rel, "loc": "manual"}]}`. Existing graphify edges get no `manual_count` (treat as 0). An edge with an end not in comps → skipped, its `"src rel tgt"` string in `missing`. Any manual node (file **or concept**) whose name graphify already has as a comp → in `found`, not duplicated; arrows still attach to the real comp but the report makes it visible.
+- `fingerprint()` in notes.py must return `None` for comps with `file is None` (concept/runtime) — add `if comp.get("manual") or comp["kind"] == "concept": return None` there, and in the folder branch skip `c.get("manual")` entries so adding/removing a runtime file never flips a folder note to stale; `note_view` then must not mark stale when the stored hash is also `None` (already true: `None != None` is False).
 
 - [ ] **Step 1: Write failing tests** in `tests/test_links.py` (unittest, tempdir):
   - `test_load_missing_returns_empty`: `load_links(tmp/"x.json") == {"nodes": {}, "edges": []}`.
   - `test_save_load_roundtrip`: save then load equal; file ends with `"\n"`; mode `0o644`.
   - `test_load_bad_shape`: `'{"version":1}'` and `'[1]'` and `'{'` each raise `ValueError`.
   - `test_merge_runtime_file_and_concept`: tiny model `{"files":[{"path":"a/x.py","kind":"code"}],"symbols":[],"external":[],"edges":[]}`; links nodes `{"out/map.html":{"kind":"file"},"SSD":{"kind":"concept"}}`, edges `[{"src":"a/x.py","rel":"creates","tgt":"out/map.html"},{"src":"a/x.py","rel":"reads","tgt":"SSD"}]`. After merge: `"out/map.html"` in file paths with `manual: True`; `model["concepts"] == [{"id":"concept:SSD","label":"SSD"}]`; edges contain `src "a/x.py" tgt "out/map.html"` and `tgt "concept:SSD"`, each `manual_count == 1`; result `{"missing": [], "found": []}`.
-  - `test_merge_missing_end`: edge to `"a/gone.py"` → not in edges, `missing == ["a/gone.py calls ..."]` form `f"{src} {rel} {tgt}"`.
+  - `test_merge_missing_end`: edge `{"src":"a/x.py","rel":"calls","tgt":"a/gone.py"}` → not in edges, `missing == ["a/x.py calls a/gone.py"]`.
+  - `test_concept_shadowed`: concept `"a"` while folder `a` is on the map → concept not in `model["concepts"]`, `found == ["a"]` (reported, never silently re-pointed).
+  - `test_folder_note_not_stale_after_runtime_file`: `fingerprint(comps["a"], ...)` equal before and after `link_components` adds runtime file `a/out.html`.
   - `test_merge_found_by_graphify`: manual file node `"a/x.py"` → `found == ["a/x.py"]`, files not duplicated.
   - `test_symbol_and_folder_ends_kept`: edge src `"a/x.py::f"` (symbol in comps) → edge src is that symbol's box (`"sym:..."`); src `"a"` → `"a/"`.
 - [ ] **Step 2:** `python -m unittest tests.test_links -v` → FAIL (ImportError).
@@ -73,12 +75,13 @@
 - Output on success: `"{ok} added node X"`, `"{ok} added link S rel T"`, `"{ok} deleted ..."`; duplicate → exit 0, `"already exists: ..."`.
 
 Rules (from spec):
-- `node` without `--concept`: name normalised like `resolve` (strip, rstrip `/`); refused if contains `::` or already a comp/manual node.
+- `node` without `--concept`: name stripped; refused (exit 1) if it ends with `/`, contains `::`, is already a comp/manual node, or any parent prefix (`a`, `a/b` of `a/b/c`) is a file comp or manual file node.
 - `--concept`: refused (exit 1) if contains `/` or `::`, or equals any comp key or manual node name.
 - `add`: each end resolved by `resolve(name, link_components(links, comps))`; KeyError → exit 1 with its message. Store the resolved key (not the box).
+- `add` with src and tgt resolving to the same key → exit 1 ("a link needs two different components").
 - `delete` edge works even if ends no longer resolve (match raw stored strings, also try resolved form). `delete` node with edges referencing it → exit 1: `"X still has links: <list>; delete them first"`.
 
-- [ ] **Step 1: Write failing tests:** `test_link_node_and_add` (writes links.json with expected content), `test_link_bad_rel_exit2`, `test_link_unknown_end_exit1`, `test_link_duplicate_noop`, `test_delete_edge`, `test_delete_edge_after_rename` (edit links.json to point at gone file, delete still exit 0), `test_delete_node_with_edges_refused`, `test_concept_name_rules` (`a/b`, `x::y`, and an existing folder name each exit 1), `test_corrupt_links_json` (exit 1, file bytes unchanged), `test_link_from_subfolder`.
+- [ ] **Step 1: Write failing tests:** `test_link_node_and_add` (writes links.json with expected content), `test_link_bad_rel_exit2`, `test_link_unknown_end_exit1`, `test_link_duplicate_noop`, `test_delete_edge`, `test_delete_edge_after_rename` (edit links.json to point at gone file, delete still exit 0), `test_delete_node_with_edges_refused`, `test_concept_name_rules` (`a/b`, `x::y`, and an existing folder name each exit 1), `test_corrupt_links_json` (exit 1, file bytes unchanged), `test_link_from_subfolder`, `test_node_under_file_refused` (`a/x.py/out.txt` exit 1), `test_node_trailing_slash_refused`, `test_self_link_refused`.
 - [ ] **Step 2:** `python -m unittest tests.test_cli -v` → new tests FAIL.
 - [ ] **Step 3:** Implement `link_main(argv)`.
 - [ ] **Step 4:** full suite PASS.
@@ -87,7 +90,7 @@ Rules (from spec):
 ### Task 3: merge into `repomap .` and report
 
 **Files:**
-- Modify: `repomap/__main__.py` `main()` (after `components(model)`: load links, `comps = link_components(...)`, `merge_links(...)`, then `annotate`/`note_view` with the extended comps); `note_main` also uses `link_components` so notes can target concepts/runtime files.
+- Modify: `repomap/__main__.py` `main()` (after `components(model)`: load links, `comps = link_components(...)`, `merge_links(...)`, then `annotate`/`note_view` with the extended comps); `note_main` also uses `link_components` so notes can target concepts/runtime files; it loads links in its **own** try block whose error names `repomap-out/links.json`.
 - Test: `tests/test_cli.py`
 
 **Interfaces:**
@@ -95,7 +98,7 @@ Rules (from spec):
 - Produces: model keys `concepts`, edges with `manual_count`, files with `manual` — consumed by Task 4.
 - Summary lines (only when non-empty): `"  {n} manual links"`, `"  {n} links point to missing components: a, b — remove with: repomap link delete <src> <rel> <tgt>"`, `"  {n} manual nodes now found by graphify: x — remove with: repomap link delete x"`.
 
-- [ ] **Step 1: Write failing tests:** `test_render_with_links` (map.html contains `"concept:SSD"` and `"manual_count"`), `test_render_lists_missing_links`, `test_render_corrupt_links` (exit 1), `test_note_on_concept` (`note add SSD "disk"` exit 0; map.html note has `"stale": false`).
+- [ ] **Step 1: Write failing tests:** `test_render_with_links` (map.html contains `"concept:SSD"` and `"manual_count"`), `test_render_lists_missing_links`, `test_render_corrupt_links` (exit 1), `test_note_on_concept` (`note add SSD "disk"` exit 0; map.html note has `"stale": false`), `test_note_corrupt_links` (`note add` exit 1, stderr mentions `links.json`).
 - [ ] **Step 2:** run → FAIL.
 - [ ] **Step 3:** Implement.
 - [ ] **Step 4:** full suite PASS.
@@ -111,15 +114,17 @@ Rules (from spec):
 - Consumes: model from Task 3.
 - Produces:
   - `buildTree`: after External, add `{id: "concept:", name: "Concepts", type: "conroot"}` with children `{id, name: label, type: "concept"}` from `model.concepts || []` — only when non-empty. File nodes carry `manual: true` when `f.manual`.
-  - `isLeaf`/`shown`/`leafCount` treat `concept` like `ext`; `allowedLeaf` returns `true` for `concept` (always shown).
+  - `conroot` behaves exactly like `extroot` everywhere it is checked: the `dir` test in `visibleView`, `container()` and `label()` in app.js. `concept` behaves like `ext` in `isLeaf`, `shown` and the `leafCount` child check; `allowedLeaf` returns `true` for `concept` (always shown). Add `concept` (and `conroot`) to `KIND` in app.js.
   - Merged arrow gets `manual: true` iff sum of `e.manual_count || 0` equals its `count`.
   - app.js: box class `manual` for manual files, `conroot`/`concept` types; arrow group class `manual` when `a.manual`; samples with `loc === "manual"` render as `"… (manual)"` instead of the loc.
-  - CSS: `.box.manual rect, .box.conroot rect, .box.concept rect, .arrow.manual .line { stroke-dasharray: 4 3; }`; add legend/colour entries for `creates`, `reads` wherever relation colours/labels are listed.
+  - Details panel: when the clicked node has `manual` or type `concept`, add a line "added manually" (plus `repomap link delete <name>` hint).
+  - Legend: there are no per-relation colours today; add a small legend in `#bar`: a dashed line sample "added manually" and the text "relations: calls · imports · creates · reads". No per-relation colours (spec call: keep current single arrow colour).
+  - CSS: `.box.manual rect, .box.conroot rect, .box.concept rect, .arrow.manual .line { stroke-dasharray: 4 3; }`.
 
-- [ ] **Step 1: Write failing tests:** `concepts frame always visible even with showExternal false`; `no concepts frame when model.concepts empty`; `arrow manual only when all links manual` (one model with a manual-only edge and a mixed pair merged into the same lifted arrow → `manual` true / false).
+- [ ] **Step 1: Write failing tests:** `concepts frame always visible even with showExternal false` (expand root; boxes include id `concept:` with `fileCount > 0` and the concept box); `no concepts frame when model.concepts empty`; `arrow manual only when all links manual` (one model with a manual-only edge and a mixed pair merged into the same lifted arrow → `manual` true / false).
 - [ ] **Step 2:** `node --test tests/` → FAIL.
 - [ ] **Step 3:** Implement.
-- [ ] **Step 4:** `node --test tests/` and `python -m unittest discover tests` PASS; run `repomap .` in this repo after `repomap link add repomap/render.py::render_html creates repomap-out/map.html` and open map.html to eyeball dashed box/arrow (then `link delete` both).
+- [ ] **Step 4:** `node --test tests/` and `python -m unittest discover tests` PASS; run `repomap .` in this repo after `repomap link add repomap/render.py::render_html creates repomap-out/map.html` and open map.html to eyeball dashed box/arrow, the legend, and "added manually" in the panel of a concept (then `link delete` both).
 - [ ] **Step 5:** Commit `feat(web): dashed manual links and Concepts frame`.
 
 ### Task 5: skill + README
