@@ -66,11 +66,13 @@ def _sha(data):
 
 def fingerprint(comp, comps, root):
     root = Path(root)
+    if comp.get("manual") or comp["kind"] == "concept":
+        return None  # runtime files and concepts have no code to hash
     if comp["kind"] == "dir":
         prefix = comp["box"]
         rows = []
         for k, c in comps.items():
-            if c["kind"] == "file" and k.startswith(prefix):
+            if c["kind"] == "file" and not c.get("manual") and k.startswith(prefix):
                 rows.append(f"{k}\0{fingerprint(c, comps, root) or '?'}\n")
         return _sha("".join(sorted(rows)).encode())
     try:
