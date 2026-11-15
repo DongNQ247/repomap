@@ -355,6 +355,8 @@ class LinkCliTest(unittest.TestCase):
         self.assertEqual(self.link("node", "app/models.py/out.txt").returncode, 1)
         self.link("node", "out/a.txt")
         self.assertEqual(self.link("node", "out/a.txt/b").returncode, 1)
+        self.link("node", "SSD", "--concept")
+        self.assertEqual(self.link("node", "SSD/x.bin").returncode, 1)
 
     def test_node_trailing_slash_refused(self):
         self.assertEqual(self.link("node", "out/").returncode, 1)

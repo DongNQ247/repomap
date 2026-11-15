@@ -191,7 +191,7 @@ def link_main(argv):
             return fail(f"a concept name cannot contain '/' or '::': {name}")
         if not args.concept and (name.endswith("/") or "::" in name):
             return fail(f"a runtime node must be a file path (folders are made from it): {name}")
-        if not args.concept and any(comps.get(p, {}).get("kind") == "file" for p in parents):
+        if not args.concept and any(comps.get(p, {}).get("kind") in ("file", "concept") for p in parents):
             return fail(f"{name} would be inside a file")
         nodes[name] = {"kind": kind}
         done = f"added node {name}"
@@ -325,7 +325,10 @@ def main(argv=None):
               " — remove with: repomap link delete <src> <rel> <tgt>")
     if lost["found"]:
         print(f"  {len(lost['found'])} manual nodes now found by graphify: {', '.join(lost['found'])}"
-              f" — remove with: repomap link delete {lost['found'][0]}")
+              " — remove each with: repomap link delete <name> (delete its links first)")
+    if lost["clash"]:
+        print(f"  {len(lost['clash'])} concepts share a name with a folder or file on the map: {', '.join(lost['clash'])}"
+              " — the name now means the concept; rename the concept to reach the code component")
     print(f"{ok} wrote {rel(out, cwd)} ({size(out.stat().st_size)})")
     print(f"  open it in your browser: {out.resolve().as_uri()}")
     return 0

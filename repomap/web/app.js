@@ -39,6 +39,7 @@
   // "file:Lnn" for symbols, the id otherwise.
   const where = (id) => {
     let n = tree.byId.get(id), f = n;
+    if (n?.type === "concept") return n.name;
     if (!n || (n.type !== "func" && n.type !== "class")) return id;
     while (f.type !== "file") f = f.parent;
     return `${n.name} ${f.id}:${n.loc}`;

@@ -46,10 +46,11 @@ def save_links(path, links):
 def link_components(links, comps):
     out = dict(comps)
     for name, n in links["nodes"].items():
-        if name in out:
+        if n["kind"] == "concept":  # explicit concept wins over a same-named path; reported as a clash
+            out[name] = {"box": "concept:" + name, "kind": "concept", "file": None, "start": 0, "end": None, "manual": True,
+                         "shadows": name in out}
             continue
-        if n["kind"] == "concept":
-            out[name] = {"box": "concept:" + name, "kind": "concept", "file": None, "start": 0, "end": None, "manual": True}
+        if name in out:
             continue
         parts = name.split("/")
         for i in range(1, len(parts)):
@@ -61,6 +62,7 @@ def link_components(links, comps):
 
 def merge_links(model, links, comps):
     found = sorted(k for k, c in comps.items() if k in links["nodes"] and not c.get("manual"))
+    clash = sorted(k for k, c in comps.items() if c.get("shadows"))
     model["concepts"] = []
     for name, n in sorted(links["nodes"].items()):
         if name in found:
@@ -78,4 +80,4 @@ def merge_links(model, links, comps):
             continue
         model["edges"].append({"src": s["box"], "tgt": t["box"], "count": 1, "manual_count": 1, "by_rel": {e["rel"]: 1},
                                "samples": [{"from": e["src"], "to": e["tgt"], "rel": e["rel"], "loc": "manual"}]})
-    return {"missing": missing, "found": found}
+    return {"missing": missing, "found": found, "clash": clash}

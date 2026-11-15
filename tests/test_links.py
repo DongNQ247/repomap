@@ -59,7 +59,7 @@ class LinksTest(unittest.TestCase):
         self.assertEqual(tgts["out/map.html"]["src"], "a/x.py")
         self.assertEqual(tgts["concept:SSD"]["manual_count"], 1)
         self.assertEqual(tgts["out/map.html"]["manual_count"], 1)
-        self.assertEqual(res, {"missing": [], "found": []})
+        self.assertEqual(res, {"missing": [], "found": [], "clash": []})
 
     def test_merge_missing_end(self):
         m, res = merged({}, [{"src": "a/x.py", "rel": "calls", "tgt": "a/gone.py"}])
@@ -67,9 +67,12 @@ class LinksTest(unittest.TestCase):
         self.assertEqual(res["missing"], ["a/x.py calls a/gone.py"])
 
     def test_concept_shadowed(self):
-        m, res = merged({"a": {"kind": "concept"}}, [])
-        self.assertEqual(m["concepts"], [])
-        self.assertEqual(res["found"], ["a"])
+        # concept added before graphify found folder `a`: name keeps meaning the concept, clash is reported
+        m, res = merged({"a": {"kind": "concept"}}, [{"src": "a/x.py", "rel": "reads", "tgt": "a"}])
+        self.assertEqual(m["concepts"], [{"id": "concept:a", "label": "a"}])
+        self.assertEqual(res["found"], [])
+        self.assertEqual(res["clash"], ["a"])
+        self.assertEqual(m["edges"][-1]["tgt"], "concept:a")
 
     def test_folder_note_not_stale_after_runtime_file(self):
         comps = components(model())
