@@ -1,6 +1,6 @@
 ---
 name: repomap
-description: Use when the developer explicitly asks to save, update or delete an explanation of a code component (folder, file, class, function) on the repomap map - "save this note", "save it", "note this down", "ghi lai", "luu note" - or asks about repomap notes marked "may be outdated".
+description: Use when the developer explicitly asks to save, update or delete an explanation of a code component (folder, file, class, function) on the repomap map - "save this note", "save it", "note this down", "ghi lai", "luu note" - or asks about repomap notes marked "may be outdated". Also when the developer asks to add a missing arrow, runtime file or concept to the map - "add link", "link this", "them lien ket", "thêm liên kết".
 ---
 
 # repomap notes
@@ -47,6 +47,24 @@ Paths are relative to the project root (the folder holding `graphify-out/`):
 A note is marked "may be outdated" when the code it describes changed. Re-read the code, then either
 `repomap note add <name> "<corrected text>"` or, if it is still right, `repomap note ok <name>`.
 `repomap` also lists notes whose component no longer exists; ask the developer before `note delete`.
+
+## Manual links
+
+graphify can miss arrows, files created at runtime and things outside the code (an SSD, an external
+service). Add them **only** when the developer asks ("add link", "link this", "thêm liên kết").
+They are stored in `repomap-out/links.json` and drawn dotted on the map.
+
+```
+repomap link node <path>             # runtime file, e.g. repomap-out/map.html
+repomap link node <name> --concept   # thing outside the code, e.g. SSD (no "/" or "::")
+repomap link add <src> <rel> <tgt>   # rel: calls | imports | creates | reads
+repomap link delete <src> <rel> <tgt>
+repomap link delete <name>           # delete its arrows first
+```
+
+- `src`/`tgt` use the same names as notes, or the name of a node added with `link node`.
+- Runtime files use their path from the project root; folders are made from the path.
+- Only the 4 relations above exist. Then run `repomap .`.
 
 ## Errors
 

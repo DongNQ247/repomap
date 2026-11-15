@@ -59,6 +59,24 @@ Notes whose component no longer exists (renamed or deleted) are kept and listed 
 
 Suggested: commit `repomap-out/notes.json`, and add `repomap-out/map.html` to `.gitignore`.
 
+## Manual links
+
+graphify can miss arrows, files created at runtime and things outside the code. Add them by hand:
+
+```
+repomap link node <path>             # runtime file, e.g. repomap-out/map.html
+repomap link node <name> --concept   # concept outside the code, e.g. SSD
+repomap link add <src> <rel> <tgt>   # rel: calls | imports | creates | reads
+repomap link delete <src> <rel> <tgt>
+repomap link delete <name>           # remove a runtime node or concept (delete its arrows first)
+```
+
+Names follow the note rules above. Links are saved in `repomap-out/links.json`, never in `graph.json`,
+so they survive `graphify update`. On the map, manual boxes and arrows are dotted, concepts sit in a
+"Concepts" frame, and an arrow is dotted only when every link merged into it was added by hand.
+`repomap` lists links whose ends no longer exist and manual nodes graphify now finds, so you can
+`link delete` them. Suggested: commit `repomap-out/links.json`.
+
 ## Claude Code skill
 
 ```
