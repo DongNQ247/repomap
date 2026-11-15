@@ -109,7 +109,9 @@ def note_main(argv):
     path = root / "repomap-out" / "notes.json"
     try:
         notes = load_notes(path)
-        name = resolve(args.name, comps)
+        key = args.name.rstrip("/")
+        # notes on renamed/removed components must stay deletable
+        name = key if args.cmd == "delete" and key in notes else resolve(args.name, comps)
     except ValueError as e:
         return fail(f"{rel(path, root)} is not valid JSON: {e}")
     except OSError as e:

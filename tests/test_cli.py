@@ -210,6 +210,10 @@ class NoteCliTest(unittest.TestCase):
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertIn("1 notes point to missing components: app/old.py", r.stdout)
         self.assertIn("app/old.py", self.notes())
+        r = run(["note", "delete", "app/old.py"], cwd=self.proj)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertNotIn("app/old.py", self.notes())
+        self.assertEqual(path.stat().st_mode & 0o777, 0o644)
 
     def test_note_from_subfolder(self):
         r = run(["note", "add", "app/models.py::User", "The user"], cwd=self.proj / "app" / "db")

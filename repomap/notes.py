@@ -106,6 +106,7 @@ def save_notes(path, notes):
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump({"version": 1, "notes": notes}, f, indent=2, sort_keys=True, ensure_ascii=False)
             f.write("\n")
+        os.chmod(tmp, 0o644)  # mkstemp makes 0600; notes are meant to be shared
         os.replace(tmp, path)
     except BaseException:
         os.unlink(tmp)
