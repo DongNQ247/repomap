@@ -12,7 +12,7 @@ file→file arrows (`calls`, `imports`, `imports_from`) carry a count. Output is
 
 ```
 uv tool install git+https://github.com/DongNQ247/repomap
-uv tool install git+https://github.com/DongNQ247/repomap@v1.1.4   # pinned version
+uv tool install git+https://github.com/DongNQ247/repomap@v1.1.5   # pinned version
 uv tool upgrade repomap
 uv tool uninstall repomap
 ```
