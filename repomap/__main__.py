@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .load import load_graph
 from .model import build_model
-from .links import RELS, link_components, load_links, save_links
+from .links import RELS, link_components, load_links, merge_links, save_links
 from .notes import annotate, components, fingerprint, load_notes, note_view, resolve, save_notes
 from .render import render_html
 
@@ -106,7 +106,13 @@ def note_main(argv):
     model = read_model(graph, rel(graph, cwd))
     if isinstance(model, int):
         return model
-    comps = components(model)
+    links_path = root / "repomap-out" / "links.json"
+    try:
+        comps = link_components(load_links(links_path), components(model))
+    except ValueError as e:
+        return fail(f"{rel(links_path, root)} is not valid JSON: {e}")
+    except OSError as e:
+        return fail(f"cannot read {rel(links_path, root)}: {e.strerror}")
     path = root / "repomap-out" / "notes.json"
     try:
         notes = load_notes(path)
@@ -280,7 +286,15 @@ def main(argv=None):
         return fail(f"{rel(notes_path, root)} is not valid JSON: {e}")
     except OSError as e:
         return fail(f"cannot read {rel(notes_path, root)}: {e.strerror}")
-    comps = components(model)
+    links_path = root / "repomap-out" / "links.json"
+    try:
+        links = load_links(links_path)
+    except ValueError as e:
+        return fail(f"{rel(links_path, root)} is not valid JSON: {e}")
+    except OSError as e:
+        return fail(f"cannot read {rel(links_path, root)}: {e.strerror}")
+    comps = link_components(links, components(model))
+    lost = merge_links(model, links, comps)
     annotate(model, comps)
     model["notes"], missing = note_view(notes, comps, root)
     html = render_html(model)
@@ -304,6 +318,14 @@ def main(argv=None):
         print(f"  {len(model['notes'])} notes" + (f" {dot} {k} may be outdated" if k else ""))
     if missing:
         print(f"  {len(missing)} notes point to missing components: {', '.join(missing)}")
+    if links["edges"]:
+        print(f"  {len(links['edges'])} manual links")
+    if lost["missing"]:
+        print(f"  {len(lost['missing'])} links point to missing components: {', '.join(lost['missing'])}"
+              " — remove with: repomap link delete <src> <rel> <tgt>")
+    if lost["found"]:
+        print(f"  {len(lost['found'])} manual nodes now found by graphify: {', '.join(lost['found'])}"
+              f" — remove with: repomap link delete {lost['found'][0]}")
     print(f"{ok} wrote {rel(out, cwd)} ({size(out.stat().st_size)})")
     print(f"  open it in your browser: {out.resolve().as_uri()}")
     return 0

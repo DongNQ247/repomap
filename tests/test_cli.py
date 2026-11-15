@@ -365,6 +365,52 @@ class LinkCliTest(unittest.TestCase):
         self.assertEqual(r.returncode, 1)
         self.assertIn("a link needs two different components", r.stderr)
 
+    def test_render_with_links(self):
+        self.link("node", "SSD", "--concept")
+        self.link("add", "app/db/store.py::save", "reads", "SSD")
+        r = run([], cwd=self.proj)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("1 manual links", r.stdout)
+        html = (self.proj / "repomap-out" / "map.html").read_text()
+        self.assertIn('"concept:SSD"', html)
+        self.assertIn('"manual_count"', html)
+
+    def test_render_lists_missing_links(self):
+        self.link("add", "app", "calls", "README.md")
+        d = self.links()
+        d["edges"][0]["tgt"] = "app/gone.py"
+        d["nodes"]["app/models.py"] = {"kind": "file"}
+        self.path.write_text(json.dumps(d))
+        r = run([], cwd=self.proj)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("1 links point to missing components: app calls app/gone.py", r.stdout)
+        self.assertIn("repomap link delete <src> <rel> <tgt>", r.stdout)
+        self.assertIn("1 manual nodes now found by graphify: app/models.py", r.stdout)
+        self.assertEqual(len(self.links()["edges"]), 1)
+
+    def test_render_corrupt_links(self):
+        self.path.parent.mkdir()
+        self.path.write_text("{oops")
+        r = run([], cwd=self.proj)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("repomap-out/links.json is not valid JSON", r.stderr)
+        self.assertEqual(self.path.read_text(), "{oops")
+
+    def test_note_on_concept(self):
+        self.link("node", "SSD", "--concept")
+        r = run(["note", "add", "SSD", "disk"], cwd=self.proj)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        run([], cwd=self.proj)
+        html = (self.proj / "repomap-out" / "map.html").read_text()
+        self.assertRegex(html, r'"concept:SSD": \{[^}]*"stale": false')
+
+    def test_note_corrupt_links(self):
+        self.path.parent.mkdir()
+        self.path.write_text("{oops")
+        r = run(["note", "add", "app", "x"], cwd=self.proj)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("links.json", r.stderr)
+
 
 if __name__ == "__main__":
     unittest.main()
