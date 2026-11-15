@@ -257,6 +257,18 @@
   const setSide = (open) => { $("side").hidden = !open; $("side-toggle").setAttribute("aria-expanded", String(open)); };
   $("side-toggle").addEventListener("click", () => setSide($("side").hidden));
   setSide(window.innerWidth >= 640);
+  // Theme: explicit choice in data-theme, else follow the OS. Storage may throw (private mode, file://).
+  const root = document.documentElement, darkOS = matchMedia("(prefers-color-scheme: dark)");
+  const isDark = () => root.dataset.theme ? root.dataset.theme === "dark" : darkOS.matches;
+  const syncTheme = () => { const d = isDark(); $("theme-toggle").textContent = d ? "Light" : "Dark"; $("theme-toggle").setAttribute("aria-pressed", String(d)); };
+  try { const t = localStorage.getItem("repomap-theme"); if (t === "light" || t === "dark") root.dataset.theme = t; } catch (e) {}
+  $("theme-toggle").addEventListener("click", () => {
+    root.dataset.theme = isDark() ? "light" : "dark";
+    try { localStorage.setItem("repomap-theme", root.dataset.theme); } catch (e) {}
+    syncTheme();
+  });
+  darkOS.addEventListener("change", syncTheme);
+  syncTheme();
   svg.addEventListener("click", () => { if (!dragged) closePanel(); });
 
   // Pan/zoom without libraries.
