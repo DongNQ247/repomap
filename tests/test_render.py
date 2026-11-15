@@ -40,7 +40,7 @@ class TestRender(unittest.TestCase):
             g.write_bytes(FIXTURE.read_bytes())
             r = subprocess.run([sys.executable, "-m", "repomap", str(g)], cwd=ROOT, capture_output=True, text=True)
             self.assertEqual(r.returncode, 0, r.stderr)
-            self.assertTrue((Path(tmp) / "map.html").exists())
+            self.assertTrue((Path(tmp) / "repomap-out" / "map.html").exists())
             r = subprocess.run([sys.executable, "-m", "repomap", str(Path(tmp) / "missing.json")],
                                cwd=ROOT, capture_output=True, text=True)
             self.assertEqual(r.returncode, 1)

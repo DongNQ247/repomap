@@ -3,10 +3,12 @@ import json
 import os
 import sys
 from importlib.metadata import PackageNotFoundError, version
+from datetime import date
 from pathlib import Path
 
 from .load import load_graph
 from .model import build_model
+from .notes import annotate, components, fingerprint, load_notes, note_view, resolve, save_notes
 from .render import render_html
 
 try:
@@ -54,11 +56,91 @@ def fail(msg):
     return 1
 
 
+def project_root(graph):
+    return graph.parent.parent if graph.parent.name == "graphify-out" else graph.parent
+
+
+def find_project(cwd):
+    for d in (cwd, *cwd.parents):
+        if (d / "graphify-out" / "graph.json").is_file():
+            return d
+    return None
+
+
+def read_model(graph, shown):
+    """Model from graph.json, or an exit code after printing the error."""
+    try:
+        data = json.loads(graph.read_text(encoding="utf-8"))
+    except OSError as e:
+        return fail(f"cannot read {shown}: {e.strerror}")
+    except (json.JSONDecodeError, UnicodeDecodeError) as e:
+        return fail(f"{shown} is not valid JSON: {e}")
+    if not isinstance(data, dict) or not isinstance(data.get("nodes"), list):
+        return fail(f"{shown} does not look like a graphify graph.json (no nodes/links)")
+    try:
+        return build_model(*load_graph(graph))  # shortcut: re-reads the file; fine for one CLI run
+    except (ValueError, KeyError, TypeError, AttributeError) as e:
+        return fail(f"{shown} does not look like a graphify graph.json (no nodes/links): {e}")
+
+
+def note_main(argv):
+    ap = argparse.ArgumentParser(prog="repomap note", description="Save, delete or confirm a note on a map component.")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    a = sub.add_parser("add", help="save or replace the note for a component")
+    a.add_argument("name", help="folder (app/db), file (app/db/store.py) or symbol (app/models.py::User.display)")
+    a.add_argument("text")
+    for cmd, h in (("delete", "delete the note"), ("ok", "mark the note as still correct")):
+        sub.add_parser(cmd, help=h).add_argument("name")
+    args = ap.parse_args(argv)
+    cwd = Path.cwd()
+    root = find_project(cwd)
+    if root is None:
+        fail(f"graphify-out/graph.json not found in {cwd.resolve()} or any parent folder")
+        print(GUIDE, file=sys.stderr)
+        return 1
+    if args.cmd == "add" and not args.text.strip():
+        return fail("note text is empty")
+    graph = root / "graphify-out" / "graph.json"
+    model = read_model(graph, rel(graph, cwd))
+    if isinstance(model, int):
+        return model
+    comps = components(model)
+    path = root / "repomap-out" / "notes.json"
+    try:
+        notes = load_notes(path)
+        name = resolve(args.name, comps)
+    except ValueError as e:
+        return fail(f"{rel(path, root)} is not valid JSON: {e}")
+    except OSError as e:
+        return fail(f"cannot read {rel(path, root)}: {e.strerror}")
+    except KeyError as e:
+        return fail(e.args[0])
+    if args.cmd != "add" and name not in notes:
+        return fail(f"no note for {name}")
+    if args.cmd == "delete":
+        del notes[name]
+        done = "deleted note for"
+    else:
+        text = args.text if args.cmd == "add" else notes[name]["text"]
+        notes[name] = {"text": text, "hash": fingerprint(comps[name], comps, root), "updated": date.today().isoformat()}
+        done = "saved note for" if args.cmd == "add" else "marked note for"
+    try:
+        save_notes(path, notes)
+    except OSError as e:
+        return fail(f"cannot write {rel(path, cwd)}: {e.strerror}")
+    ok = "\033[32m✓\033[0m" if style(sys.stdout) else "OK"
+    print(f"{ok} {done} {name}" + (" as up to date" if args.cmd == "ok" else ""))
+    return 0
+
+
 def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ["note"]:
+        return note_main(argv[1:])
     ap = argparse.ArgumentParser(prog="repomap", description="Render graphify's graph.json as a nested file/folder call map.")
     ap.add_argument("graph", nargs="?", type=Path,
                     help="graph.json, or a project folder (default: ./graphify-out/graph.json)")
-    ap.add_argument("-o", "--out", type=Path, help="output HTML (default: map.html next to graph.json)")
+    ap.add_argument("-o", "--out", type=Path, help="output HTML (default: repomap-out/map.html in the project)")
     ap.add_argument("-q", "--quiet", action="store_true", help="print only the output path")
     ap.add_argument("--version", action="version", version=f"repomap {VERSION}")
     args = ap.parse_args(argv)
@@ -69,20 +151,22 @@ def main(argv=None):
         print(GUIDE, file=sys.stderr)
         return 1
     shown = rel(graph, cwd)
+    model = read_model(graph, shown)
+    if isinstance(model, int):
+        return model
+    root = project_root(graph)
+    notes_path = root / "repomap-out" / "notes.json"
     try:
-        data = json.loads(graph.read_text(encoding="utf-8"))
+        notes = load_notes(notes_path)
+    except ValueError as e:
+        return fail(f"{rel(notes_path, root)} is not valid JSON: {e}")
     except OSError as e:
-        return fail(f"cannot read {shown}: {e.strerror}")
-    except (json.JSONDecodeError, UnicodeDecodeError) as e:
-        return fail(f"{shown} is not valid JSON: {e}")
-    if not isinstance(data, dict) or not isinstance(data.get("nodes"), list):
-        return fail(f"{shown} does not look like a graphify graph.json (no nodes/links)")
-    try:
-        model = build_model(*load_graph(graph))  # shortcut: re-reads the file; fine for one CLI run
-        html = render_html(model)
-    except (ValueError, KeyError, TypeError, AttributeError) as e:
-        return fail(f"{shown} does not look like a graphify graph.json (no nodes/links): {e}")
-    out = cwd / args.out if args.out else graph.with_name("map.html")
+        return fail(f"cannot read {rel(notes_path, root)}: {e.strerror}")
+    comps = components(model)
+    annotate(model, comps)
+    model["notes"], missing = note_view(notes, comps, root)
+    html = render_html(model)
+    out = cwd / args.out if args.out else root / "repomap-out" / "map.html"
     try:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(html, encoding="utf-8")
@@ -97,6 +181,11 @@ def main(argv=None):
     n = lambda k: f"{len(model.get(k, [])):,}"
     print(f"repomap {VERSION} {dot} reading {shown}")
     print(f"  {n('files')} files {dot} {n('symbols')} symbols {dot} {n('edges')} arrows")
+    if model["notes"]:
+        k = sum(v["stale"] for v in model["notes"].values())
+        print(f"  {len(model['notes'])} notes" + (f" {dot} {k} may be outdated" if k else ""))
+    if missing:
+        print(f"  {len(missing)} notes point to missing components: {', '.join(missing)}")
     print(f"{ok} wrote {rel(out, cwd)} ({size(out.stat().st_size)})")
     print(f"  open it in your browser: {out.resolve().as_uri()}")
     return 0

@@ -20,16 +20,44 @@ uv tool uninstall repomap
 ## Command line
 
 ```
-repomap                    # reads ./graphify-out/graph.json, writes graphify-out/map.html
+repomap                    # reads ./graphify-out/graph.json, writes repomap-out/map.html
 repomap PATH               # PATH is a graph.json, or a folder containing graphify-out/graph.json
 repomap -o out/map.html    # write somewhere else
 repomap -q                 # print only the absolute path of the written file
 repomap --version
 ```
 
+Output goes to `repomap-out/` in the project root (the folder that holds `graphify-out/`).
+Changed in 1.1.0: `map.html` used to be written into `graphify-out/`; it now lives in `repomap-out/map.html`.
+
 An existing `map.html` is overwritten. The browser is not opened; the command prints a `file://` link.
 If `graph.json` is missing, repomap prints how to install graphify and build it, and exits with code 1.
 Invalid JSON, a file that is not a graphify graph, or an unwritable output also exit with code 1; bad arguments exit with code 2.
+
+## Notes
+
+Attach a plain-text note to a folder, file or symbol. Notes are saved in `repomap-out/notes.json`
+and shown on the map after the next `repomap` run.
+
+```
+repomap note add <name> "<text>"   # save, or replace the existing note
+repomap note delete <name>
+repomap note ok <name>             # the code changed but the note is still right
+```
+
+Names are relative to the project root and work from any subfolder:
+
+- folder: `app/db`
+- file: `app/db/store.py`
+- symbol: `app/db/store.py::save`, method: `app/models.py::User.display`
+- two symbols with the same name in one file: add the line, `app/dup.py::helper@L40` (repomap lists the valid names)
+
+Each note stores a fingerprint (sha256) of the code it describes. When that code changes, the map still
+shows the note but marks it "may be outdated"; check it, then `note add` a new text or `note ok`.
+Notes whose component no longer exists (renamed or deleted) are kept and listed by `repomap` so you can
+`note delete` them.
+
+Suggested: commit `repomap-out/notes.json`, and add `repomap-out/map.html` to `.gitignore`.
 
 ## Using the map
 
