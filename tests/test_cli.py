@@ -22,7 +22,7 @@ class CliTest(unittest.TestCase):
     def test_version(self):
         r = run(["--version"], cwd=ROOT)
         self.assertEqual(r.returncode, 0)
-        self.assertEqual(r.stdout.strip(), "repomap 1.1.2")
+        self.assertEqual(r.stdout.strip(), "repomap 1.1.3")
 
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
@@ -43,7 +43,7 @@ class CliTest(unittest.TestCase):
         r = run([], cwd=proj)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue((proj / "repomap-out" / "map.html").exists())
-        self.assertIn("repomap 1.1.2 - reading graphify-out/graph.json", r.stdout)
+        self.assertIn("repomap 1.1.3 - reading graphify-out/graph.json", r.stdout)
         self.assertRegex(r.stdout, r"\d+ files - \d+ symbols - \d+ arrows")
         self.assertIn("OK wrote repomap-out/map.html (", r.stdout)
         self.assertIn("file://", r.stdout)
