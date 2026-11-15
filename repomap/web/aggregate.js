@@ -11,7 +11,7 @@ export function buildTree(model) {
       prefix += dir + "/";
       cur = byId.get(prefix) || add({ id: prefix, name: dir, type: "dir", children: [] }, cur);
     }
-    add({ id: f.path, name: parts[parts.length - 1], type: "file", kind: f.kind, children: [] }, cur);
+    add({ id: f.path, name: parts[parts.length - 1], type: "file", kind: f.kind, manual: f.manual, children: [] }, cur);
   }
   const syms = (model.symbols || []).map((x) => ({ id: x.id, name: x.name, type: x.kind, loc: x.loc,
     kind: byId.get(x.file)?.kind, children: [], p: x.parent }));
@@ -19,6 +19,10 @@ export function buildTree(model) {
   for (const n of syms) { const p = byId.get(n.p); delete n.p; if (p) add(n, p); else byId.delete(n.id); }
   const ext = add({ id: "ext:", name: "External", type: "extroot", children: [] }, root);
   for (const x of model.external) add({ id: x.id, name: x.label, type: "ext", children: [] }, ext);
+  if (model.concepts?.length) {
+    const con = add({ id: "concept:", name: "Concepts", type: "conroot", children: [] }, root);
+    for (const x of model.concepts) add({ id: x.id, name: x.label, type: "concept", children: [] }, con);
+  }
   root.byId = byId;
   return root;
 }
@@ -27,8 +31,8 @@ const isCode = (n) => n.type === "file" || n.type === "class" || n.type === "fun
 // Nearest file node at or above a file/class/func node.
 const fileOf = (n) => { while (n.type !== "file") n = n.parent; return n; };
 // Filter-button rule for a file, symbol (by its file) or external; ignores `hidden`.
-const allowedLeaf = (n, state) => isCode(n) ? (state.showDocs || fileOf(n).kind !== "doc") : state.showExternal;
-const isLeaf = (n) => n.type === "ext" || (isCode(n) && n.children.length === 0);
+const allowedLeaf = (n, state) => n.type === "concept" || (isCode(n) ? (state.showDocs || fileOf(n).kind !== "doc") : state.showExternal);
+const isLeaf = (n) => n.type === "ext" || n.type === "concept" || (isCode(n) && n.children.length === 0);
 
 // True if the node or any ancestor is in `hidden`.
 export function isHidden(n, hidden) {
@@ -45,12 +49,12 @@ export function allowed(n, state) {
 export function visibleView(tree, model, state) {
   const byId = tree.byId;
   // Files/symbols by their own rule (a file stays even if all its symbols are hidden); folders by content.
-  const shown = (n) => isCode(n) || n.type === "ext" ? allowedLeaf(n, state) && !isHidden(n, state.hidden) : leafCount(n) > 0;
+  const shown = (n) => isCode(n) || n.type === "ext" || n.type === "concept" ? allowedLeaf(n, state) && !isHidden(n, state.hidden) : leafCount(n) > 0;
   const counts = new Map();
   function leafCount(n) {
     if (counts.has(n.id)) return counts.get(n.id);
     let c = 0;
-    for (const ch of n.children) c += ch.type === "file" || ch.type === "ext" ? (shown(ch) ? 1 : 0) : leafCount(ch);
+    for (const ch of n.children) c += ch.type === "file" || ch.type === "ext" || ch.type === "concept" ? (shown(ch) ? 1 : 0) : leafCount(ch);
     counts.set(n.id, c);
     return c;
   }
@@ -60,8 +64,8 @@ export function visibleView(tree, model, state) {
   (function walk(n) {
     for (const ch of n.children) {
       if (!shown(ch)) continue;
-      const dir = ch.type === "dir" || ch.type === "extroot", container = !isLeaf(ch);
-      boxes.push({ id: ch.id, name: ch.name, type: ch.type, parent: n.id, loc: ch.loc,
+      const dir = ch.type === "dir" || ch.type === "extroot" || ch.type === "conroot", container = !isLeaf(ch);
+      boxes.push({ id: ch.id, name: ch.name, type: ch.type, parent: n.id, loc: ch.loc, manual: ch.manual,
         collapsed: container && !isOpen(ch), fileCount: dir ? leafCount(ch) : 0, hasChildren: container,
         childCount: container && !dir ? ch.children.filter(shown).length : 0,
         hiddenCount: container && !dir ? ch.children.filter((c) => allowedLeaf(c, state) && isHidden(c, state.hidden)).length : 0 });
@@ -86,12 +90,14 @@ export function visibleView(tree, model, state) {
     if (s === null || t === null || s === t) continue;
     const key = s + "\u0000" + t;
     let a = merged.get(key);
-    if (!a) merged.set(key, a = { src: s, tgt: t, inner: isAnc(s, t) || isAnc(t, s), count: 0, by_rel: {}, samples: [] });
+    if (!a) merged.set(key, a = { src: s, tgt: t, inner: isAnc(s, t) || isAnc(t, s), count: 0, manual_count: 0, by_rel: {}, samples: [] });
     a.count += e.count;
+    a.manual_count += e.manual_count || 0;
     for (const [r, c] of Object.entries(e.by_rel)) a.by_rel[r] = (a.by_rel[r] || 0) + c;
     if (a.samples.length < 20) a.samples.push(...e.samples.slice(0, 20 - a.samples.length));
   }
   const arrows = [...merged.values()];
+  for (const a of arrows) a.manual = a.manual_count === a.count;
   return { boxes, arrows, total: boxes.length + arrows.length };
 }
 

@@ -205,3 +205,24 @@ test("notesUnder lists descendant notes only", () => {
   assert.deepEqual(notesUnder(tree, notes, "lib/c.py"), []);
   assert.deepEqual(notesUnder(tree, {}, "nope"), []);
 });
+
+test("concepts frame always visible even with showExternal false", () => {
+  const m = { ...model, concepts: [{ id: "concept:SSD", label: "SSD" }],
+    edges: [...model.edges, { src: "pkg/a.py", tgt: "concept:SSD", count: 1, manual_count: 1, by_rel: { reads: 1 }, samples: [] }] };
+  const v = visibleView(buildTree(m), m, S({ expanded: ["concept:"] }));
+  const fr = v.boxes.find((b) => b.id === "concept:");
+  assert.ok(fr && fr.fileCount > 0 && fr.type === "conroot");
+  assert.ok(v.boxes.some((b) => b.id === "concept:SSD" && b.type === "concept"));
+  assert.ok(arrowSet(v).includes("pkg/->concept:SSD:1"));
+});
+test("no concepts frame when model.concepts empty", () => {
+  const m = { ...model, concepts: [] };
+  assert.ok(!buildTree(m).byId.has("concept:"));
+});
+test("arrow manual only when all links manual", () => {
+  const M = (src, tgt) => ({ src, tgt, count: 1, manual_count: 1, by_rel: { creates: 1 }, samples: [] });
+  const m = { ...model, edges: [M("pkg/a.py", "tests/test_a.py"), E("pkg/a.py", "lib/c.py", 1, "calls"), M("pkg/lone.py", "lib/c.py")] };
+  const v = visibleView(buildTree(m), m, S());
+  assert.equal(v.arrows.find((a) => a.tgt === "tests/").manual, true);
+  assert.equal(v.arrows.find((a) => a.tgt === "lib/").manual, false);
+});

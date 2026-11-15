@@ -22,7 +22,7 @@ class CliTest(unittest.TestCase):
     def test_version(self):
         r = run(["--version"], cwd=ROOT)
         self.assertEqual(r.returncode, 0)
-        self.assertEqual(r.stdout.strip(), "repomap 1.1.2")
+        self.assertEqual(r.stdout.strip(), "repomap 1.1.3")
 
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp())
@@ -43,7 +43,7 @@ class CliTest(unittest.TestCase):
         r = run([], cwd=proj)
         self.assertEqual(r.returncode, 0, r.stderr)
         self.assertTrue((proj / "repomap-out" / "map.html").exists())
-        self.assertIn("repomap 1.1.2 - reading graphify-out/graph.json", r.stdout)
+        self.assertIn("repomap 1.1.3 - reading graphify-out/graph.json", r.stdout)
         self.assertRegex(r.stdout, r"\d+ files - \d+ symbols - \d+ arrows")
         self.assertIn("OK wrote repomap-out/map.html (", r.stdout)
         self.assertIn("file://", r.stdout)
@@ -255,6 +255,163 @@ class NoteCliTest(unittest.TestCase):
         r = run(["note", "add", "app", "   "], cwd=self.proj)
         self.assertEqual(r.returncode, 1)
         self.assertIn("note text is empty", r.stderr)
+
+
+class LinkCliTest(unittest.TestCase):
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+        self.proj = self.tmp / "proj"
+        shutil.copytree(NOTES_PROJ, self.proj)
+        self.path = self.proj / "repomap-out" / "links.json"
+
+    def link(self, *args, cwd=None):
+        return run(["link", *args], cwd=cwd or self.proj)
+
+    def links(self):
+        return json.loads(self.path.read_text())
+
+    def test_link_node_and_add(self):
+        r = self.link("node", "out/map.html")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("OK added node out/map.html", r.stdout)
+        self.assertEqual(self.link("node", "SSD", "--concept").returncode, 0)
+        r = self.link("add", "app/db/store.py::save", "creates", "out/map.html")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("OK added link app/db/store.py::save creates out/map.html", r.stdout)
+        self.assertEqual(self.link("add", "app/db/", "reads", "SSD").returncode, 0)
+        self.assertEqual(self.links(), {"version": 1,
+            "nodes": {"SSD": {"kind": "concept"}, "out/map.html": {"kind": "file"}},
+            "edges": [{"src": "app/db", "rel": "reads", "tgt": "SSD"},
+                      {"src": "app/db/store.py::save", "rel": "creates", "tgt": "out/map.html"}]})
+
+    def test_link_bad_rel_exit2(self):
+        self.assertEqual(self.link("add", "app", "uses", "README.md").returncode, 2)
+        self.assertEqual(self.link("delete", "a", "b").returncode, 2)
+
+    def test_link_unknown_end_exit1(self):
+        r = self.link("add", "app", "calls", "app/nope.py")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("app/nope.py is not on the map", r.stderr)
+        self.assertFalse(self.path.exists())
+
+    def test_link_duplicate_noop(self):
+        self.link("add", "app", "calls", "README.md")
+        r = self.link("add", "app", "calls", "README.md")
+        self.assertEqual(r.returncode, 0)
+        self.assertIn("already exists", r.stdout)
+        self.assertEqual(len(self.links()["edges"]), 1)
+        self.link("node", "SSD", "--concept")
+        self.assertIn("already exists", self.link("node", "SSD", "--concept").stdout)
+
+    def test_delete_edge(self):
+        self.link("add", "app", "calls", "README.md")
+        r = self.link("delete", "app/", "calls", "README.md")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("OK deleted", r.stdout)
+        self.assertEqual(self.links()["edges"], [])
+        self.assertEqual(self.link("delete", "app", "calls", "README.md").returncode, 1)
+
+    def test_delete_edge_after_rename(self):
+        self.link("add", "app", "calls", "README.md")
+        d = self.links()
+        d["edges"][0]["tgt"] = "app/gone.py"
+        self.path.write_text(json.dumps(d))
+        r = self.link("delete", "app", "calls", "app/gone.py")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(self.links()["edges"], [])
+
+    def test_delete_node_with_edges_refused(self):
+        self.link("node", "SSD", "--concept")
+        self.link("add", "app", "reads", "SSD")
+        before = self.path.read_bytes()
+        r = self.link("delete", "SSD")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("SSD still has links: app reads SSD; delete them first", r.stderr)
+        self.assertEqual(self.path.read_bytes(), before)
+        self.link("delete", "app", "reads", "SSD")
+        self.assertEqual(self.link("delete", "SSD").returncode, 0)
+        self.assertEqual(self.links()["nodes"], {})
+
+    def test_concept_name_rules(self):
+        for name in ("a/b", "x::y", "app"):
+            self.assertEqual(self.link("node", name, "--concept").returncode, 1, name)
+        self.assertFalse(self.path.exists())
+
+    def test_corrupt_links_json(self):
+        self.path.parent.mkdir()
+        self.path.write_text("{oops")
+        r = self.link("node", "SSD", "--concept")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("repomap-out/links.json is not valid JSON", r.stderr)
+        self.assertEqual(self.path.read_text(), "{oops")
+
+    def test_link_from_subfolder(self):
+        r = self.link("add", "app/models.py::User", "calls", "app/db", cwd=self.proj / "app" / "db")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertTrue(self.path.exists())
+
+    def test_node_under_file_refused(self):
+        self.assertEqual(self.link("node", "app/models.py/out.txt").returncode, 1)
+        self.link("node", "out/a.txt")
+        self.assertEqual(self.link("node", "out/a.txt/b").returncode, 1)
+        self.link("node", "SSD", "--concept")
+        self.assertEqual(self.link("node", "SSD/x.bin").returncode, 1)
+
+    def test_node_trailing_slash_refused(self):
+        self.assertEqual(self.link("node", "out/").returncode, 1)
+        self.assertEqual(self.link("node", "app/x.py::f").returncode, 1)
+
+    def test_self_link_refused(self):
+        r = self.link("add", "app", "calls", "app/")
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("a link needs two different components", r.stderr)
+
+    def test_render_with_links(self):
+        self.link("node", "SSD", "--concept")
+        self.link("add", "app/db/store.py::save", "reads", "SSD")
+        r = run([], cwd=self.proj)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("1 manual links", r.stdout)
+        html = (self.proj / "repomap-out" / "map.html").read_text()
+        self.assertIn('"concept:SSD"', html)
+        self.assertIn('"manual_count"', html)
+
+    def test_render_lists_missing_links(self):
+        self.link("add", "app", "calls", "README.md")
+        d = self.links()
+        d["edges"][0]["tgt"] = "app/gone.py"
+        d["nodes"]["app/models.py"] = {"kind": "file"}
+        self.path.write_text(json.dumps(d))
+        r = run([], cwd=self.proj)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("1 links point to missing components: app calls app/gone.py", r.stdout)
+        self.assertIn("repomap link delete <src> <rel> <tgt>", r.stdout)
+        self.assertIn("1 manual nodes now found by graphify: app/models.py", r.stdout)
+        self.assertEqual(len(self.links()["edges"]), 1)
+
+    def test_render_corrupt_links(self):
+        self.path.parent.mkdir()
+        self.path.write_text("{oops")
+        r = run([], cwd=self.proj)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("repomap-out/links.json is not valid JSON", r.stderr)
+        self.assertEqual(self.path.read_text(), "{oops")
+
+    def test_note_on_concept(self):
+        self.link("node", "SSD", "--concept")
+        r = run(["note", "add", "SSD", "disk"], cwd=self.proj)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        run([], cwd=self.proj)
+        html = (self.proj / "repomap-out" / "map.html").read_text()
+        self.assertRegex(html, r'"concept:SSD": \{[^}]*"stale": false')
+
+    def test_note_corrupt_links(self):
+        self.path.parent.mkdir()
+        self.path.write_text("{oops")
+        r = run(["note", "add", "app", "x"], cwd=self.proj)
+        self.assertEqual(r.returncode, 1)
+        self.assertIn("links.json", r.stderr)
 
 
 if __name__ == "__main__":

@@ -47,11 +47,16 @@ body { display: flex; flex-direction: column; background: var(--bg); color: var(
 .box.class > rect.leaf { stroke-dasharray: 1 3; }
 rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--d2); } rect.d3 { fill: var(--d3); }
 .box.k-test text { fill: var(--muted); }
-.arrow .line { stroke-dasharray: 5 4; fill: none; stroke: var(--line); opacity: .7; }
-.arrow.self .line { stroke: var(--inner); stroke-dasharray: 4 3; }
+.arrow .line { stroke-dasharray: none; fill: none; stroke: var(--line); opacity: .7; }
+.arrow.self .line { stroke: var(--inner); }
 .arrow.self .count { fill: var(--inner); }
 .arrow .hit { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; }
 .arrow:hover .line { opacity: 1; }
+/* graphify arrows are solid, manual arrows dashed; manual boxes dotted (folder frames are already dashed) */
+.box.manual rect, .box.conroot rect, .box.concept rect { stroke-dasharray: 2 4; }
+.arrow.manual .line, #legend line { stroke-dasharray: 6 4; }
+#legend { color: var(--muted); font-size: 11px; }
+#legend line { stroke: var(--line); stroke-width: 2; }
 .arrow .count { font-size: 11px; fill: var(--line); text-anchor: middle; }
 #head path { fill: var(--line); }
 #panel { width: 320px; flex: none; overflow: auto; border-left: 1px solid var(--border); background: var(--panel);
@@ -94,6 +99,7 @@ rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--
   <label><input type="checkbox" id="opt-ext"> External</label>
   <button id="collapse-all" type="button">Collapse all</button>
   <button id="theme-toggle" type="button" aria-label="Toggle dark mode">Dark</button>
+  <span id="legend"><svg width="24" height="8" aria-hidden="true"><line x1="0" y1="4" x2="24" y2="4"/></svg> added manually &middot; relations: calls &middot; imports &middot; creates &middot; reads</span>
   <span id="stats"></span>
 </div>
 <div id="main">
