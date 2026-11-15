@@ -15,7 +15,7 @@
   const notes = model.notes || {};
   const refs = new Map((model.symbols || []).map((x) => [x.id, x.ref]));
   // Name the CLI uses: symbol ref, folder without trailing "/", file path.
-  const ref = (id) => refs.get(id) || id.replace(/\/$/, "");
+  const ref = (id) => refs.get(id) || id.replace(/\/$/, "").replace(/^concept:/, "");
 
   const el = (tag, attrs, parent) => {
     const e = document.createElementNS(SVGNS, tag);
@@ -32,10 +32,10 @@
       if (b.collapsed) return `▸ ${b.name} (${n}${hid})`;
       return b.childCount ? `▾ ${b.name}` : `▾ ${b.name} (${n}${hid})`;
     }
-    return b.collapsed ? `▸ ${b.name}/ (${b.fileCount} ${b.type === "extroot" ? "symbols" : "files"})`
-      : (b.type === "dir" ? `▾ ${b.name}/` : b.type === "extroot" ? `▾ ${b.name}` : b.name);
+    return b.collapsed ? `▸ ${b.name}/ (${b.fileCount} ${b.type === "extroot" ? "symbols" : b.type === "conroot" ? "concepts" : "files"})`
+      : (b.type === "dir" ? `▾ ${b.name}/` : b.type === "extroot" || b.type === "conroot" ? `▾ ${b.name}` : b.name);
   };
-  const container = (b) => b.type === "dir" || b.type === "extroot" || b.hasChildren;
+  const container = (b) => b.type === "dir" || b.type === "extroot" || b.type === "conroot" || b.hasChildren;
   // "file:Lnn" for symbols, the id otherwise.
   const where = (id) => {
     let n = tree.byId.get(id), f = n;
@@ -79,7 +79,7 @@
     const boxLayer = el("g", {}, viewport), edgeLayer = el("g", {}, viewport);
     const drawNode = (n, ox, oy) => {
       const x = ox + n.x, y = oy + n.y, b = n.box;
-      const grp = el("g", { class: `box ${b.type}${b.id === focusId ? " focus" : ""}${notes[b.id] ? (notes[b.id].stale ? " stale" : " noted") : ""}${b.collapsed ? " collapsed" : ""}${b.type === "file" ? " k-" + (tree.byId.get(b.id).kind || "") : ""}`, "data-id": b.id }, boxLayer);
+      const grp = el("g", { class: `box ${b.type}${b.id === focusId ? " focus" : ""}${notes[b.id] ? (notes[b.id].stale ? " stale" : " noted") : ""}${b.collapsed ? " collapsed" : ""}${b.manual ? " manual" : ""}${b.type === "file" ? " k-" + (tree.byId.get(b.id).kind || "") : ""}`, "data-id": b.id }, boxLayer);
       const open = !!n.children;
       el("rect", { x, y, width: n.width, height: n.height, class: open ? `frame d${depth(b.id) % 4}` : "leaf", rx: b.type === "func" ? 10 : 4 }, grp);
       const t = el("text", { x: x + 8, y: y + 19 }, grp);
@@ -98,7 +98,7 @@
       const a = edge.arrow;
       for (const pts of sections) {
         const d = "M" + pts.map((p) => `${p.x},${p.y}`).join("L");
-        const grp = el("g", { class: a.inner ? "arrow self" : "arrow", "data-src": a.src, "data-tgt": a.tgt }, edgeLayer);
+        const grp = el("g", { class: (a.inner ? "arrow self" : "arrow") + (a.manual ? " manual" : ""), "data-src": a.src, "data-tgt": a.tgt }, edgeLayer);
         el("path", { d, class: "hit" }, grp);
         el("path", { d, class: "line", "stroke-width": 1 + Math.log2(a.count), "marker-end": "url(#head)" }, grp);
         const m = pts[Math.floor((pts.length - 1) / 2)], m2 = pts[Math.floor((pts.length - 1) / 2) + 1] || m;
@@ -121,7 +121,7 @@
   }
   function closePanel() { selected = null; panel.hidden = true; }
 
-  const KIND = { dir: "folder", file: "file", class: "class", func: "function" };
+  const KIND = { dir: "folder", file: "file", class: "class", func: "function", conroot: "concepts", concept: "concept" };
   function select(id) {
     const n = tree.byId.get(id);
     if (!n || !KIND[n.type]) return;
@@ -129,6 +129,7 @@
     openPanel(KIND[n.type]);
     add("div", where(id));
     const note = notes[id], name = ref(id);
+    if (n.manual || n.type === "concept") { add("div", "added manually", "more"); add("code", `repomap link delete ${name}`); }
     if (note) {
       add("div", note.text, "note");
       if (note.stale) { add("span", "may be outdated", "badge"); add("code", `Checked it? Run: repomap note ok ${name}`); }
@@ -150,7 +151,7 @@
     const ul = add("ul", "");
     for (const s of a.samples) {
       const li = document.createElement("li");
-      li.textContent = `${s.from} → ${s.to} (${s.rel}) ${s.loc}`;
+      li.textContent = `${s.from} → ${s.to} (${s.rel}) ${s.loc === "manual" ? "(manual)" : s.loc}`;
       ul.appendChild(li);
     }
     if (a.count > a.samples.length) add("div", `… ${a.samples.length}/${a.count} samples`, "more");

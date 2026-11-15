@@ -52,6 +52,10 @@ rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--
 .arrow.self .count { fill: var(--inner); }
 .arrow .hit { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; }
 .arrow:hover .line { opacity: 1; }
+/* existing arrows and folder frames are already dashed "5 4"; manual items use a dotted pattern to stay distinct */
+.box.manual rect, .box.conroot rect, .box.concept rect, .arrow.manual .line, #legend line { stroke-dasharray: 2 4; }
+#legend { color: var(--muted); font-size: 11px; }
+#legend line { stroke: var(--line); stroke-width: 2; }
 .arrow .count { font-size: 11px; fill: var(--line); text-anchor: middle; }
 #head path { fill: var(--line); }
 #panel { width: 320px; flex: none; overflow: auto; border-left: 1px solid var(--border); background: var(--panel);
@@ -94,6 +98,7 @@ rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--
   <label><input type="checkbox" id="opt-ext"> External</label>
   <button id="collapse-all" type="button">Collapse all</button>
   <button id="theme-toggle" type="button" aria-label="Toggle dark mode">Dark</button>
+  <span id="legend"><svg width="24" height="8" aria-hidden="true"><line x1="0" y1="4" x2="24" y2="4"/></svg> added manually &middot; relations: calls &middot; imports &middot; creates &middot; reads</span>
   <span id="stats"></span>
 </div>
 <div id="main">
