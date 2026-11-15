@@ -23,8 +23,7 @@
     if (parent) parent.appendChild(e);
     return e;
   };
-  const label = baseLabel;
-  const baseLabel = (b) => {
+  const label = (b) => {
     if (b.type === "file" || b.type === "class") {
       if (!b.hasChildren) return b.name;
       const n = b.childCount ? `${b.childCount} ${b.type === "file" ? "symbols" : "methods"}` : "0 shown";
