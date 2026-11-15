@@ -1,6 +1,6 @@
 [project]
 name = "repomap"
-version = "1.1.0"
+version = "1.1.1"
 description = "Render graphify's graph.json as an interactive nested file/folder call map"
 readme = "README.md"
 requires-python = ">=3.10"

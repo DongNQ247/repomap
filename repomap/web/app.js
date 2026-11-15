@@ -275,6 +275,23 @@
     tx = ev.clientX - drag.x; ty = ev.clientY - drag.y; dragged = true; apply();
   });
   window.addEventListener("pointerup", () => { drag = null; });
+  // Drag/arrow-key resize for side tree and details panel; width remembered per viewer.
+  document.querySelectorAll(".grip").forEach((g) => {
+    const el = $(g.dataset.for), right = g.dataset.for === "panel", key = "repomap.w." + g.dataset.for, def = el.offsetWidth || (right ? 320 : 280);
+    const set = (w) => { w = Math.round(Math.min(innerWidth * 0.6, Math.max(200, w))); el.style.width = w + "px"; try { localStorage.setItem(key, w); } catch (e) {} };
+    try { const w = +localStorage.getItem(key); if (w) el.style.width = Math.min(innerWidth * 0.6, Math.max(200, w)) + "px"; } catch (e) {}
+    g.addEventListener("pointerdown", (ev) => {
+      ev.preventDefault(); g.setPointerCapture(ev.pointerId);
+      const mv = (e) => set(right ? innerWidth - e.clientX : e.clientX - el.getBoundingClientRect().left);
+      g.addEventListener("pointermove", mv);
+      g.addEventListener("pointerup", () => g.removeEventListener("pointermove", mv), { once: true });
+    });
+    g.addEventListener("dblclick", () => set(def));
+    g.addEventListener("keydown", (ev) => {
+      const d = { ArrowLeft: -20, ArrowRight: 20 }[ev.key];
+      if (d) { ev.preventDefault(); set(el.offsetWidth + (right ? -d : d)); }
+    });
+  });
   apply();
   render();
   drawTree();

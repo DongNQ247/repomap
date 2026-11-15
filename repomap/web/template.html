@@ -50,6 +50,10 @@ rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--
 #panel { width: 320px; flex: none; overflow: auto; border-left: 1px solid var(--border); background: var(--panel);
   padding: 10px 12px; font: 12px ui-monospace, monospace; box-sizing: border-box; }
 #panel[hidden] { display: none; }
+.grip { width: 5px; flex: none; margin: 0 -2px; z-index: 1; cursor: col-resize; touch-action: none; }
+.grip:hover, .grip:focus-visible { background: var(--border); outline: none; }
+.grip:has(+ #panel[hidden]) { display: none; }
+@media (max-width: 700px) { .grip { display: none; } }
 @media (max-width: 700px) { #panel { position: fixed; right: 0; top: 0; bottom: 0; width: min(320px, 100%); z-index: 2; } }
 #panel .top { display: flex; gap: 8px; align-items: flex-start; }
 #panel .top .head { flex: 1; min-width: 0; overflow-wrap: anywhere; }
@@ -79,10 +83,12 @@ rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--
   <div id="side-tools"><input id="tree-search" type="search" placeholder="Search files…" aria-label="Search files"><button id="show-all" type="button">Show all</button></div>
   <div id="tree"></div>
 </nav>
+<div class="grip" data-for="side" role="separator" aria-orientation="vertical" aria-label="Resize file tree" tabindex="0"></div>
 <svg id="map">
   <defs><marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0,0L10,5L0,10z"/></marker></defs>
   <g id="viewport"></g>
 </svg>
+<div class="grip" data-for="panel" role="separator" aria-orientation="vertical" aria-label="Resize details panel" tabindex="0"></div>
 <aside id="panel" aria-label="Details" hidden></aside>
 </div>
 <script id="model" type="application/json">__MODEL__</script>
