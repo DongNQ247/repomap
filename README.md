@@ -59,6 +59,15 @@ Notes whose component no longer exists (renamed or deleted) are kept and listed 
 
 Suggested: commit `repomap-out/notes.json`, and add `repomap-out/map.html` to `.gitignore`.
 
+## Claude Code skill
+
+```
+repomap skill install    # copies SKILL.md to ~/.claude/skills/repomap/SKILL.md (overwrites)
+```
+
+The skill teaches Claude Code to save notes only when you ask ("save it"), how to name components, and
+how to handle outdated notes. Run it again after `uv tool upgrade repomap` to update the skill.
+
 ## Using the map
 
 - Click a folder to expand/collapse it. All folders start collapsed; arrows into a collapsed folder are merged and their counts summed.

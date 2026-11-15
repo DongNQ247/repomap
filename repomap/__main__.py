@@ -2,6 +2,7 @@ import argparse
 import json
 import os
 import sys
+from importlib.resources import files
 from importlib.metadata import PackageNotFoundError, version
 from datetime import date
 from pathlib import Path
@@ -133,10 +134,29 @@ def note_main(argv):
     return 0
 
 
+def skill_main(argv):
+    ap = argparse.ArgumentParser(prog="repomap skill", description="Manage the bundled Claude Code skill.")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    sub.add_parser("install", help="copy SKILL.md to ~/.claude/skills/repomap/")
+    ap.parse_args(argv)
+    dst = Path.home() / ".claude" / "skills" / "repomap" / "SKILL.md"
+    try:
+        text = (files("repomap") / "skill" / "SKILL.md").read_text(encoding="utf-8")
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_text(text, encoding="utf-8")
+    except OSError as e:
+        return fail(f"cannot write {dst}: {e.strerror}")
+    ok = "\033[32m✓\033[0m" if style(sys.stdout) else "OK"
+    print(f"{ok} installed Claude Code skill: {dst}")
+    return 0
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["note"]:
         return note_main(argv[1:])
+    if argv[:1] == ["skill"]:
+        return skill_main(argv[1:])
     ap = argparse.ArgumentParser(prog="repomap", description="Render graphify's graph.json as a nested file/folder call map.")
     ap.add_argument("graph", nargs="?", type=Path,
                     help="graph.json, or a project folder (default: ./graphify-out/graph.json)")

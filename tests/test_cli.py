@@ -125,6 +125,19 @@ class CliTest(unittest.TestCase):
     def test_bad_args_exit_2(self):
         self.assertEqual(run(["--nope"], cwd=self.tmp).returncode, 2)
 
+    def test_skill_install(self):
+        home = self.tmp / "home"
+        r = run(["skill", "install"], cwd=self.tmp, env={"HOME": str(home)})
+        self.assertEqual(r.returncode, 0, r.stderr)
+        dst = home / ".claude" / "skills" / "repomap" / "SKILL.md"
+        self.assertIn(f"OK installed Claude Code skill: {dst}", r.stdout)
+        self.assertTrue(dst.read_text().startswith("---\nname: repomap\n"))
+        self.assertIn("repomap note add", dst.read_text())
+        self.assertEqual(run(["skill", "install"], cwd=self.tmp, env={"HOME": str(home)}).returncode, 0)
+
+    def test_skill_bad_args(self):
+        self.assertEqual(run(["skill"], cwd=self.tmp).returncode, 2)
+
 
 class NoteCliTest(unittest.TestCase):
     def setUp(self):
