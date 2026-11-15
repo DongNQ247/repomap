@@ -65,7 +65,7 @@ class TestRender(unittest.TestCase):
             self.assertTrue(r.stderr)
 
     def test_ui_text_is_english(self):
-        allowed = set("▸▾→…📝✕")
+        allowed = set("▸▾→…✕")
         for rel in ["repomap/web/aggregate.js", "repomap/web/app.js", "repomap/web/template.html", "README.md"]:
             text = (ROOT / rel).read_text(encoding="utf-8")
             bad = sorted({ch for ch in text if ord(ch) > 127 and ch not in allowed})

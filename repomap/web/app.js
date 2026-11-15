@@ -23,7 +23,7 @@
     if (parent) parent.appendChild(e);
     return e;
   };
-  const label = (b) => baseLabel(b) + (notes[b.id] ? " 📝" : "");
+  const label = baseLabel;
   const baseLabel = (b) => {
     if (b.type === "file" || b.type === "class") {
       if (!b.hasChildren) return b.name;
@@ -85,6 +85,7 @@
       el("rect", { x, y, width: n.width, height: n.height, class: open ? `frame d${depth(b.id) % 4}` : "leaf", rx: b.type === "func" ? 10 : 4 }, grp);
       const t = el("text", { x: x + 8, y: y + 19 }, grp);
       t.textContent = label(b);
+      if (notes[b.id]) el("rect", { x: x + n.width - 10, y: y + 4, width: 6, height: 6, class: "dot" }, grp);
       const title = el("title", {}, grp);
       title.textContent = where(b.id);
       grp.addEventListener("click", (ev) => {
@@ -211,7 +212,8 @@
       cb.setAttribute("aria-label", "Show " + r.id);
       cb.addEventListener("change", () => setShown(r.id, cb.checked));
       const name = document.createElement("span");
-      name.className = "name t-" + r.type; name.textContent = r.name + (r.type === "dir" ? "/" : "") + (notes[r.id] ? " 📝" : "");
+      name.className = "name t-" + r.type; name.textContent = r.name + (r.type === "dir" ? "/" : "") + (notes[r.id] ? " " : "");
+      if (notes[r.id]) name.append(Object.assign(document.createElement("span"), { className: notes[r.id].stale ? "dot stale" : "dot" }));
       name.title = where(r.id);
       if (r.check !== "off") name.addEventListener("click", () => focusOn(r.id));
       row.append(tw, cb, name);

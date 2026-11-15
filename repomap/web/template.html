@@ -88,6 +88,10 @@ rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--
 #panel code { display: block; margin-top: 4px; color: var(--muted); overflow-wrap: anywhere; }
 .box.noted > rect { stroke: var(--fresh); }
 .box.stale > rect { stroke: var(--stale); stroke-width: 2; }
+.box > rect.dot { fill: var(--fresh); stroke: none; }
+.box.stale > rect.dot { fill: var(--stale); }
+.row .dot { display: inline-block; width: 6px; height: 6px; background: var(--fresh); vertical-align: middle; }
+.row .dot.stale { background: var(--stale); }
 #bar button, #side-tools button { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 0; padding: 4px 10px;
   font: inherit; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; cursor: pointer; }
 #bar button:hover, #side-tools button:hover { border-color: var(--accent); color: var(--accent); }
