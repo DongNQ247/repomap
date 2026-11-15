@@ -71,3 +71,5 @@ repomap link delete <name>           # delete its arrows first
 - `<name> is not on the map`: check the name against the rules above. If the code is new, the graph
   may be stale: run `graphify update .` first, then retry.
 - `graphify-out/graph.json not found`: build the graph with `graphify update .`.
+- `repomap .` lists links pointing to missing components, manual nodes now found by graphify, or
+  concepts sharing a name with a folder/file: tell the developer and ask before deleting or renaming.
