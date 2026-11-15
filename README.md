@@ -72,8 +72,8 @@ repomap link delete <name>           # remove a runtime node or concept (delete 
 ```
 
 Names follow the note rules above. Links are saved in `repomap-out/links.json`, never in `graph.json`,
-so they survive `graphify update`. On the map, manual boxes and arrows are dotted, concepts sit in a
-"Concepts" frame, and an arrow is dotted only when every link merged into it was added by hand.
+so they survive `graphify update`. On the map, graphify arrows are solid, manual arrows dashed and manual boxes dotted, concepts sit in a
+"Concepts" frame, and an arrow is dashed only when every link merged into it was added by hand.
 `repomap` lists links whose ends no longer exist and manual nodes graphify now finds, so you can
 `link delete` them. Suggested: commit `repomap-out/links.json`.
 

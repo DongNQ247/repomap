@@ -52,7 +52,7 @@ A note is marked "may be outdated" when the code it describes changed. Re-read t
 
 graphify can miss arrows, files created at runtime and things outside the code (an SSD, an external
 service). Add them **only** when the developer asks ("add link", "link this", "thêm liên kết").
-They are stored in `repomap-out/links.json` and drawn dotted on the map.
+They are stored in `repomap-out/links.json` and drawn on the map as dashed arrows and dotted boxes.
 
 ```
 repomap link node <path>             # runtime file, e.g. repomap-out/map.html

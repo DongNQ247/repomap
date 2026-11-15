@@ -47,13 +47,14 @@ body { display: flex; flex-direction: column; background: var(--bg); color: var(
 .box.class > rect.leaf { stroke-dasharray: 1 3; }
 rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--d2); } rect.d3 { fill: var(--d3); }
 .box.k-test text { fill: var(--muted); }
-.arrow .line { stroke-dasharray: 5 4; fill: none; stroke: var(--line); opacity: .7; }
-.arrow.self .line { stroke: var(--inner); stroke-dasharray: 4 3; }
+.arrow .line { stroke-dasharray: none; fill: none; stroke: var(--line); opacity: .7; }
+.arrow.self .line { stroke: var(--inner); }
 .arrow.self .count { fill: var(--inner); }
 .arrow .hit { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; }
 .arrow:hover .line { opacity: 1; }
-/* existing arrows and folder frames are already dashed "5 4"; manual items use a dotted pattern to stay distinct */
-.box.manual rect, .box.conroot rect, .box.concept rect, .arrow.manual .line, #legend line { stroke-dasharray: 2 4; }
+/* graphify arrows are solid, manual arrows dashed; manual boxes dotted (folder frames are already dashed) */
+.box.manual rect, .box.conroot rect, .box.concept rect { stroke-dasharray: 2 4; }
+.arrow.manual .line, #legend line { stroke-dasharray: 6 4; }
 #legend { color: var(--muted); font-size: 11px; }
 #legend line { stroke: var(--line); stroke-width: 2; }
 .arrow .count { font-size: 11px; fill: var(--line); text-anchor: middle; }
