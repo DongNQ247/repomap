@@ -12,7 +12,7 @@ file→file arrows (`calls`, `imports`, `imports_from`) carry a count. Output is
 
 ```
 uv tool install git+https://github.com/DongNQ247/repomap
-uv tool install git+https://github.com/DongNQ247/repomap@v1.1.3   # pinned version
+uv tool install git+https://github.com/DongNQ247/repomap@v1.1.4   # pinned version
 uv tool upgrade repomap
 uv tool uninstall repomap
 ```
@@ -92,9 +92,9 @@ how to handle outdated notes. Run it again after `uv tool upgrade repomap` to up
 - Click an arrow to see its breakdown by relation and the symbol pairs with `file:line` in the details panel on the right.
 - Click a folder, file or symbol to show its details and note in the right panel (folders and files also expand/collapse). Click a symbol again, the `x` button or the background to close it. Boxes with a note are outlined green, or yellow when the note may be outdated.
 - Scroll to zoom, drag to pan.
-- **Test arrows**: show arrows that start from test files (test boxes are always shown).
-- **Docs/config**: show `.md`, `.json`, `.yml`, `.toml`… files.
-- **External**: show a frame of symbols outside the repo (nodes without `source_file`), by symbol name.
+- **Show > Tests**: show arrows that start from test files (test boxes are always shown).
+- **Show > Docs**: show `.md`, `.json`, `.yml`, `.toml`… files.
+- **Show > External**: show a frame of symbols outside the repo (nodes without `source_file`), by symbol name.
 - **Collapse all**: back to the initial state.
 - If expanding would show more than 400 boxes + arrows, you are asked to confirm first.
 
@@ -105,7 +105,7 @@ how to handle outdated notes. Run it again after `uv tool upgrade repomap` to up
 - Uncheck a file or folder to remove it, and every arrow into or out of it, from the map. A folder's checkbox shows a partial state when only some of its contents are hidden. **Show all** brings everything back; hidden state is not kept on reload.
 - **Search files…** filters the tree by name (case-insensitive substring) and shows the path to each match.
 - Click a name to open its parent folders on the map, center it and highlight it.
-- The tree only lists items the filter buttons allow (docs with **Docs/config**, the external frame with **External**). Counts and the 400-item check exclude hidden items.
+- The tree only lists items the filter buttons allow (docs with **Docs**, the external frame with **External**). Counts and the 400-item check exclude hidden items.
 
 ## Expanding files
 
