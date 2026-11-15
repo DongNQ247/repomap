@@ -5,14 +5,21 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Repo Map</title>
 <style>
-:root { color-scheme: light dark; --bg: #fafaf8; --fg: #1f2328; --muted: #6b7280; --leaf: #ffffff; --line: #4b6bfb; --border: #c9ccd1;
-  --d0: #eef2ff; --d1: #ecfdf5; --d2: #fff7ed; --d3: #fdf2f8; --panel: #ffffff; --inner: #c2410c; --stale: #ca8a04; --fresh: #16a34a; }
+/*__FONTS__*/
+:root { color-scheme: light dark; --bg: #f5f7fc; --fg: #14245c; --muted: #5b6b94; --leaf: #ffffff; --line: #6f8ad6; --border: #c3cde6;
+  --d0: #f0f4ff; --d1: #eaf0fd; --d2: #e4ebfb; --d3: #dee6f9; --panel: #ffffff; --inner: #c2410c; --stale: #ca8a04; --fresh: #16a34a;
+  --accent: #1e3fae; --grid: #e3e9f6; }
+:root[data-theme="light"] { color-scheme: light; }
 @media (prefers-color-scheme: dark) {
-  :root { --bg: #16181d; --fg: #e6e6e6; --muted: #9aa0a6; --leaf: #23262d; --line: #8ea2ff; --border: #444a55;
-    --d0: #1d2238; --d1: #172a24; --d2: #2d2219; --d3: #2c1a25; --panel: #1f2228; --inner: #fb923c; --stale: #facc15; --fresh: #4ade80; }
+  :root:not([data-theme="light"]) { --bg: #0d1729; --fg: #dbe4ff; --muted: #8293bd; --leaf: #13213b; --line: #5b7be0; --border: #263a63;
+    --d0: #12203a; --d1: #152542; --d2: #182a4a; --d3: #1b2f52; --panel: #101d33; --inner: #fb923c; --stale: #facc15; --fresh: #4ade80;
+    --accent: #2f5bea; --grid: #16243f; }
 }
+:root[data-theme="dark"] { color-scheme: dark; --bg: #0d1729; --fg: #dbe4ff; --muted: #8293bd; --leaf: #13213b; --line: #5b7be0; --border: #263a63;
+  --d0: #12203a; --d1: #152542; --d2: #182a4a; --d3: #1b2f52; --panel: #101d33; --inner: #fb923c; --stale: #facc15; --fresh: #4ade80;
+  --accent: #2f5bea; --grid: #16243f; }
 html, body { margin: 0; height: 100%; }
-body { display: flex; flex-direction: column; background: var(--bg); color: var(--fg); font: 13px system-ui, sans-serif; }
+body { display: flex; flex-direction: column; background: var(--bg); color: var(--fg); font: 13px "JBMono", ui-monospace, monospace; }
 #bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; padding: 8px 16px; border-bottom: 1px solid var(--border); }
 #stats { color: var(--muted); margin-left: auto; }
 #main { display: flex; flex: 1; min-height: 0; }
@@ -20,8 +27,8 @@ body { display: flex; flex-direction: column; background: var(--bg); color: var(
 #side { width: 280px; flex: none; display: flex; flex-direction: column; border-right: 1px solid var(--border); background: var(--panel); }
 #side[hidden] { display: none; }
 #side-tools { display: flex; gap: 6px; padding: 8px; border-bottom: 1px solid var(--border); }
-#tree-search { flex: 1; min-width: 0; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 3px 6px; }
-#tree { flex: 1; overflow-y: auto; padding: 4px 0; font: 12px ui-monospace, monospace; }
+#tree-search { flex: 1; min-width: 0; background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 0; padding: 3px 6px; }
+#tree { flex: 1; overflow-y: auto; padding: 4px 0; font-size: 12px; }
 .row { display: flex; align-items: center; gap: 4px; padding: 1px 8px; white-space: nowrap; }
 .row .tw { width: 14px; flex: none; border: 0; background: none; color: var(--muted); padding: 0; cursor: pointer; font: inherit; }
 .row .name { cursor: pointer; overflow: hidden; text-overflow: ellipsis; }
@@ -30,7 +37,7 @@ body { display: flex; flex-direction: column; background: var(--bg); color: var(
 .row .name.t-func { font-style: italic; }
 .row.off .name { color: var(--muted); cursor: default; }
 .box.focus rect { stroke: var(--line); stroke-width: 3; }
-.box text { font: 12px ui-monospace, monospace; fill: var(--fg); pointer-events: none; }
+.box text { font-weight: 700; font-size: 12px; fill: var(--fg); pointer-events: none; }
 .box rect.leaf { fill: var(--leaf); stroke: var(--border); }
 .box.collapsed rect.leaf { stroke-width: 1.5; }
 .box.dir, .box.extroot, .box.collapsed, .box:has(> rect.frame) { cursor: pointer; }
@@ -40,15 +47,15 @@ body { display: flex; flex-direction: column; background: var(--bg); color: var(
 .box.class > rect.leaf { stroke-dasharray: 1 3; }
 rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--d2); } rect.d3 { fill: var(--d3); }
 .box.k-test text { fill: var(--muted); }
-.arrow .line { fill: none; stroke: var(--line); opacity: .7; }
+.arrow .line { stroke-dasharray: 5 4; fill: none; stroke: var(--line); opacity: .7; }
 .arrow.self .line { stroke: var(--inner); stroke-dasharray: 4 3; }
 .arrow.self .count { fill: var(--inner); }
 .arrow .hit { fill: none; stroke: transparent; stroke-width: 12; cursor: pointer; }
 .arrow:hover .line { opacity: 1; }
-.arrow .count { font: 11px system-ui; fill: var(--line); text-anchor: middle; }
+.arrow .count { font-size: 11px; fill: var(--line); text-anchor: middle; }
 #head path { fill: var(--line); }
 #panel { width: 320px; flex: none; overflow: auto; border-left: 1px solid var(--border); background: var(--panel);
-  padding: 10px 12px; font: 12px ui-monospace, monospace; box-sizing: border-box; }
+  padding: 10px 12px; font-size: 12px; box-sizing: border-box; }
 #panel[hidden] { display: none; }
 .grip { width: 5px; flex: none; margin: 0 -2px; z-index: 1; cursor: col-resize; touch-action: none; }
 .grip:hover, .grip:focus-visible { background: var(--border); outline: none; }
@@ -59,14 +66,24 @@ rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--
 #panel .top .head { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 #panel .close { flex: none; border: 0; background: none; color: var(--muted); cursor: pointer; font: inherit; padding: 0 2px; }
 #panel .close:hover { color: var(--fg); }
-#panel .head { font-weight: 600; margin-bottom: 4px; }
+#panel .head { font-weight: 700; text-transform: uppercase; letter-spacing: .1em; padding-bottom: 6px; border-bottom: 1px solid var(--border); margin-bottom: 4px; }
 #panel ul { margin: 6px 0 0; padding-left: 18px; }
 #panel .more { color: var(--muted); }
-#panel .note { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0; font-family: system-ui, sans-serif; font-size: 13px; }
-#panel .badge { display: inline-block; color: var(--stale); border: 1px solid var(--stale); border-radius: 4px; padding: 0 4px; }
+#panel .note { white-space: pre-wrap; overflow-wrap: anywhere; margin: 8px 0;  }
+#panel .badge { display: inline-block; color: var(--stale); border: 1px solid var(--stale); border-radius: 0; padding: 0 4px; }
 #panel code { display: block; margin-top: 4px; color: var(--muted); overflow-wrap: anywhere; }
 .box.noted > rect { stroke: var(--fresh); }
 .box.stale > rect { stroke: var(--stale); stroke-width: 2; }
+#bar button, #side-tools button { background: var(--panel); color: var(--fg); border: 1px solid var(--border); border-radius: 0; padding: 4px 10px;
+  font: inherit; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; cursor: pointer; }
+#bar button:hover, #side-tools button:hover { border-color: var(--accent); color: var(--accent); }
+#bar button[aria-pressed="true"], #bar button[aria-expanded="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+#bar label { text-transform: uppercase; letter-spacing: .06em; font-size: 11px; font-weight: 700; }
+#bar input[type=checkbox] { accent-color: var(--accent); }
+#tree-search { font: inherit; }
+.gridline { stroke: var(--grid); }
+#panel li { padding: 2px 0; border-bottom: 1px solid var(--border); list-style: none; }
+#panel ul { padding-left: 0; }
 </style>
 </head>
 <body>
@@ -76,6 +93,7 @@ rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--
   <label><input type="checkbox" id="opt-docs"> Docs/config</label>
   <label><input type="checkbox" id="opt-ext"> External</label>
   <button id="collapse-all" type="button">Collapse all</button>
+  <button id="theme-toggle" type="button" aria-label="Toggle dark mode">Dark</button>
   <span id="stats"></span>
 </div>
 <div id="main">
@@ -85,7 +103,8 @@ rect.d0 { fill: var(--d0); } rect.d1 { fill: var(--d1); } rect.d2 { fill: var(--
 </nav>
 <div class="grip" data-for="side" role="separator" aria-orientation="vertical" aria-label="Resize file tree" tabindex="0"></div>
 <svg id="map">
-  <defs><marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0,0L10,5L0,10z"/></marker></defs>
+  <defs><pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><path d="M24 0H0V24" fill="none" class="gridline"/></pattern><marker id="head" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse" markerUnits="userSpaceOnUse"><path d="M0,0L10,5L0,10z"/></marker></defs>
+  <rect id="grid-bg" width="100%" height="100%" fill="url(#grid)"/>
   <g id="viewport"></g>
 </svg>
 <div class="grip" data-for="panel" role="separator" aria-orientation="vertical" aria-label="Resize details panel" tabindex="0"></div>

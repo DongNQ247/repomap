@@ -22,6 +22,17 @@ class TestRender(unittest.TestCase):
         self.assertFalse("export function" in html)
         self.assertFalse("/*__" in html)
 
+    def test_font_embedded(self):
+        html = render_html(build_model(*load_graph(FIXTURE)))
+        self.assertIn("@font-face", html)
+        self.assertIn("font/woff2;base64,", html)
+        self.assertEqual(html.count("</style"), 1)
+
+    def test_theme_toggle_present(self):
+        html = render_html(build_model(*load_graph(FIXTURE)))
+        self.assertIn('id="theme-toggle"', html)
+        self.assertIn("repomap-theme", html)
+
     def test_html_escaping(self):
         model = {"files": [{"path": "x</script><b>&/*__APP__*/.py", "kind": "code"}], "external": [], "edges": []}
         html = render_html(model)

@@ -17,6 +17,7 @@ def render_html(model):
         "/*__ELK__*/": _js("vendor/elk.bundled.js"),
         "/*__AGGREGATE__*/": _js("aggregate.js").replace("export function", "function"),
         "/*__APP__*/": _js("app.js"),
+        "/*__FONTS__*/": (WEB / "vendor/fonts.css").read_text(encoding="utf-8"),
     }
     # Single pass so inserted content is never re-scanned for placeholders.
     pattern = re.compile("|".join(re.escape(k) for k in parts))
