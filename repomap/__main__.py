@@ -9,6 +9,7 @@ from pathlib import Path
 
 from .load import load_graph
 from .model import build_model
+from .links import RELS, link_components, load_links, save_links
 from .notes import annotate, components, fingerprint, load_notes, note_view, resolve, save_notes
 from .render import render_html
 
@@ -136,6 +137,99 @@ def note_main(argv):
     return 0
 
 
+def link_main(argv):
+    ap = argparse.ArgumentParser(prog="repomap link", description="Add or delete manual nodes and arrows graphify missed.")
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    n = sub.add_parser("node", help="add a runtime file (out/map.html) or, with --concept, a concept (SSD)")
+    n.add_argument("name")
+    n.add_argument("--concept", action="store_true", help="something outside the code, e.g. SSD or an external service")
+    a = sub.add_parser("add", help="add an arrow")
+    a.add_argument("src")
+    a.add_argument("rel", choices=RELS)
+    a.add_argument("tgt")
+    sub.add_parser("delete", help="delete an arrow (src rel tgt) or a manual node (name)").add_argument("args", nargs="+")
+    args = ap.parse_args(argv)
+    if args.cmd == "delete" and len(args.args) not in (1, 3):
+        ap.error("delete takes <name> or <src> <rel> <tgt>")
+    cwd = Path.cwd()
+    root = find_project(cwd)
+    if root is None:
+        fail(f"graphify-out/graph.json not found in {cwd.resolve()} or any parent folder")
+        print(GUIDE, file=sys.stderr)
+        return 1
+    graph = root / "graphify-out" / "graph.json"
+    model = read_model(graph, rel(graph, cwd))
+    if isinstance(model, int):
+        return model
+    path = root / "repomap-out" / "links.json"
+    try:
+        links = load_links(path)
+    except ValueError as e:
+        return fail(f"{rel(path, root)} is not valid JSON: {e}")
+    except OSError as e:
+        return fail(f"cannot read {rel(path, root)}: {e.strerror}")
+    comps = link_components(links, components(model))
+    nodes, edges = links["nodes"], links["edges"]
+    show = lambda e: f"{e['src']} {e['rel']} {e['tgt']}"
+    if args.cmd == "node":
+        name, kind = args.name.strip(), "concept" if args.concept else "file"
+        if nodes.get(name, {}).get("kind") == kind:
+            print(f"already exists: {name}")
+            return 0
+        parents = ["/".join(name.split("/")[:i]) for i in range(1, name.count("/") + 1)]
+        if not name:
+            return fail("name is empty")
+        if name in comps:
+            return fail(f"{name} is already on the map")
+        if args.concept and ("/" in name or "::" in name):
+            return fail(f"a concept name cannot contain '/' or '::': {name}")
+        if not args.concept and (name.endswith("/") or "::" in name):
+            return fail(f"a runtime node must be a file path (folders are made from it): {name}")
+        if not args.concept and any(comps.get(p, {}).get("kind") == "file" for p in parents):
+            return fail(f"{name} would be inside a file")
+        nodes[name] = {"kind": kind}
+        done = f"added node {name}"
+    elif args.cmd == "add":
+        try:
+            e = {"src": resolve(args.src, comps), "rel": args.rel, "tgt": resolve(args.tgt, comps)}
+        except KeyError as err:
+            return fail(err.args[0])
+        if e["src"] == e["tgt"]:
+            return fail("a link needs two different components")
+        if e in edges:
+            print(f"already exists: {show(e)}")
+            return 0
+        edges.append(e)
+        done = f"added link {show(e)}"
+    elif len(args.args) == 3:
+        def key(x):  # links to renamed/removed components must stay deletable
+            try:
+                return resolve(x, comps)
+            except KeyError:
+                return x.strip() if "::" in x else x.strip().rstrip("/")
+        e = {"src": key(args.args[0]), "rel": args.args[1], "tgt": key(args.args[2])}
+        if e not in edges:
+            return fail(f"no link {show(e)}")
+        edges.remove(e)
+        done = f"deleted link {show(e)}"
+    else:
+        name = args.args[0].strip()
+        if name not in nodes:
+            return fail(f"no manual node {name}")
+        used = [show(e) for e in edges if name in (e["src"], e["tgt"])]
+        if used:
+            return fail(f"{name} still has links: {', '.join(used)}; delete them first")
+        del nodes[name]
+        done = f"deleted node {name}"
+    try:
+        save_links(path, links)
+    except OSError as e:
+        return fail(f"cannot write {rel(path, cwd)}: {e.strerror}")
+    ok = "\033[32m✓\033[0m" if style(sys.stdout) else "OK"
+    print(f"{ok} {done}")
+    return 0
+
+
 def skill_main(argv):
     ap = argparse.ArgumentParser(prog="repomap skill", description="Manage the bundled Claude Code skill.")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -157,6 +251,8 @@ def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["note"]:
         return note_main(argv[1:])
+    if argv[:1] == ["link"]:
+        return link_main(argv[1:])
     if argv[:1] == ["skill"]:
         return skill_main(argv[1:])
     ap = argparse.ArgumentParser(prog="repomap", description="Render graphify's graph.json as a nested file/folder call map.")
