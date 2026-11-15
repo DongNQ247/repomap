@@ -1,0 +1,27 @@
+{"directed": true, "multigraph": false, "graph": {},
+ "nodes": [
+  {"id": "fm", "label": "models.py", "source_file": "app/models.py", "file_type": "code", "source_location": "L1"},
+  {"id": "U", "label": "User", "source_file": "app/models.py", "file_type": "code", "source_location": "L1"},
+  {"id": "Ui", "label": ".__init__()", "source_file": "app/models.py", "file_type": "code", "source_location": "L2"},
+  {"id": "Ud", "label": ".display()", "source_file": "app/models.py", "file_type": "code", "source_location": "L5"},
+  {"id": "mk", "label": "make_user()", "source_file": "app/models.py", "file_type": "code", "source_location": "L9"},
+  {"id": "fs", "label": "store.py", "source_file": "app/db/store.py", "file_type": "code", "source_location": "L1"},
+  {"id": "sv", "label": "save()", "source_file": "app/db/store.py", "file_type": "code", "source_location": "L3"},
+  {"id": "ld", "label": "load()", "source_file": "app/db/store.py", "file_type": "code", "source_location": "L6"},
+  {"id": "fd", "label": "dup.py", "source_file": "app/dup.py", "file_type": "code", "source_location": "L1"},
+  {"id": "h1", "label": "helper()", "source_file": "app/dup.py", "file_type": "code", "source_location": "L1"},
+  {"id": "h2", "label": "helper()", "source_file": "app/dup.py", "file_type": "code", "source_location": "L4"},
+  {"id": "rd", "label": "README.md", "source_file": "README.md", "file_type": "document"}
+ ],
+ "links": [
+  {"source": "fm", "target": "U", "relation": "contains"},
+  {"source": "U", "target": "Ui", "relation": "method"},
+  {"source": "U", "target": "Ud", "relation": "method"},
+  {"source": "fm", "target": "mk", "relation": "contains"},
+  {"source": "mk", "target": "U", "relation": "calls"},
+  {"source": "fs", "target": "sv", "relation": "contains"},
+  {"source": "fs", "target": "ld", "relation": "contains"},
+  {"source": "fd", "target": "h1", "relation": "contains"},
+  {"source": "fd", "target": "h2", "relation": "contains"}
+ ]
+}
