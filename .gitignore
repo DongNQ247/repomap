@@ -4,3 +4,4 @@ out/
 dist/
 .venv/
 spec/
+docs/superpowers/
