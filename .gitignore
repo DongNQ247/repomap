@@ -4,4 +4,5 @@ out/
 dist/
 .venv/
 spec/
-docs/superpowers/
+docs/*
+!docs/images/
